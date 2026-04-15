@@ -46,6 +46,9 @@ export interface Warning {
   level: 1 | 2 | 3;
   issuedBy: string;
   issuedAt: string;
+  amount?: number;
+  isPaid?: boolean;
+  paidAt?: string;
 }
 
 export interface ActivityLog {
@@ -55,4 +58,14 @@ export interface ActivityLog {
   action: string;
   details: string;
   timestamp: string;
+}
+
+export interface StaffEquipmentRequest {
+  id: string;
+  staffId: string;
+  staffName: string;
+  equipmentName: string;
+  quantity: number;
+  createdAt: string;
+  status: 'pending' | 'fulfilled' | 'dismissed';
 }
