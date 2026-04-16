@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { Menu, LogOut, Smartphone } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -18,6 +19,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -49,54 +51,74 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="h-screen flex bg-background overflow-hidden font-sans">
+    <div className="h-screen flex bg-gradient-to-br from-background via-background to-secondary/30 overflow-hidden font-sans">
+      
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden transition-all duration-300" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* Floating Vertical Palette (Sidebar) */}
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
         onLogout={handleLogout} 
+        onHoverChange={setSidebarHovered}
       />
 
-      {/* Main content wrapper */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 flex items-center justify-between px-3 sm:px-4 lg:px-6 shrink-0 z-30">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <button className="lg:hidden text-foreground" onClick={() => setSidebarOpen(true)}>
-              <Menu className="w-5 h-5" />
-            </button>
-            <h1 className="text-base sm:text-lg font-semibold text-foreground capitalize truncate">{getPageTitle()}</h1>
+      {/* Main content wrapper - Joined to sidebar */}
+      <div 
+        className={cn(
+          "flex-1 flex flex-col min-w-0 transition-[padding] duration-500 ease-out relative z-10 w-full max-w-full",
+          !sidebarHovered && "lg:pl-[80px]"
+        )}
+        style={sidebarHovered ? { paddingLeft: '256px' } : undefined}
+      >
+        {/* Top Header - Merged with Sidebar Colors */}
+        <header className="h-16 border-b border-white/5 bg-slate-950 flex items-center justify-between pl-8 sm:pl-12 pr-4 sm:pr-6 shrink-0 z-30 transition-all duration-300 w-full max-w-full sticky top-0">
+          <button 
+            className="md:hidden p-2 rounded-lg hover:bg-white/10 text-white transition-colors" 
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          
+          <div className="flex flex-col">
+            <h1 className="text-sm font-bold text-white capitalize tracking-tight">
+              {user?.role} Portal
+            </h1>
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+              Sports Equip Active Session
+            </p>
           </div>
-
-          <div className="flex items-center gap-4">
+          
+          <div className="ml-auto flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:bg-muted/50 p-1.5 pr-3 rounded-full transition-colors border border-border/50">
-                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                <button className="flex items-center gap-3 hover:bg-white/10 p-1 pr-3 lg:pr-4 rounded-full transition-all duration-300 border border-white/5 shadow-sm group">
+                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold text-sm shadow-inner group-hover:scale-105 transition-transform duration-300">
                     {user?.name?.charAt(0)}
                   </div>
-                  <span className="text-sm font-medium hidden sm:block">{user?.name}</span>
+                  <div className="flex flex-col items-start hidden sm:flex leading-none">
+                    <span className="text-sm font-bold tracking-tight text-white">{user?.name}</span>
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">{user?.role}</span>
+                  </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-64 rounded-xl border-border/50 shadow-elevated overflow-hidden p-1 backdrop-blur-xl bg-card/95">
+                <DropdownMenuLabel className="px-3 py-3">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground mt-1">{user?.email}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-primary font-semibold mt-1">{user?.role}</p>
+                    <p className="text-sm font-bold tracking-tight">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground font-medium">{user?.email}</p>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSendSMS} className="cursor-pointer py-2">
-                  <Smartphone className="mr-2 h-4 w-4 text-blue-500" />
+                <DropdownMenuSeparator className="bg-border/50" />
+                <DropdownMenuItem onClick={handleSendSMS} className="cursor-pointer py-2.5 px-3 rounded-lg focus:bg-primary/10 focus:text-primary transition-colors mt-1 font-medium text-sm">
+                  <Smartphone className="mr-2 h-4 w-4" />
                   <span>Send credentials via SMS</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 cursor-pointer py-2">
+                <DropdownMenuSeparator className="bg-border/50" />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 cursor-pointer py-2.5 px-3 rounded-lg transition-colors font-medium text-sm">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
@@ -105,9 +127,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         
-        {/* Scrollable area for content */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 custom-scrollbar">
-          <div className="animate-fade-in max-w-7xl mx-auto w-full">
+        {/* Scrollable area for content - Original padding restored here */}
+        <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 w-full max-w-full">
+          <div className="animate-fade-in max-w-[1600px] mx-auto w-full">
             {children}
           </div>
         </main>

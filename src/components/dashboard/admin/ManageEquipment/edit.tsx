@@ -23,7 +23,6 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
     available: equipment.available.toString(),
     inUse: equipment.inUse.toString(),
     assignedStaffId: equipment.assignedStaffId || '',
-    description: equipment.description || '',
   });
 
   // Keep form in sync with equipment prop if it changes
@@ -35,7 +34,6 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
       available: equipment.available.toString(),
       inUse: equipment.inUse.toString(),
       assignedStaffId: equipment.assignedStaffId || '',
-      description: equipment.description || '',
     });
   }, [equipment, open]);
 
@@ -61,9 +59,7 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
       totalQuantity: total,
       available: avail,
       inUse: use,
-      damaged: 0,
       assignedStaffId: form.assignedStaffId,
-      description: form.description,
     });
 
     setOpen(false);
@@ -146,15 +142,6 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
                 onChange={e => setForm(f => ({ ...f, inUse: e.target.value }))} 
               />
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="edit-desc">Description</Label>
-            <Input 
-              id="edit-desc" 
-              value={form.description} 
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
-            />
           </div>
         </div>
 

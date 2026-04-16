@@ -1,6 +1,7 @@
 import { User, Equipment, Booking, Warning, ActivityLog, UserRole } from '@/types';
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { initialUsers } from '@/lib/UserContext';
+import api from '@/lib/api';
 
 
 
@@ -33,31 +34,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, []);
 
-  const login = useCallback(async (email: string, password?: string, otp?: string) => {
+  const login = useCallback(async (email: string, password?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // In Real API, we call /auth/login
+      const response = await api.post('/auth/login', { email, password });
       
-      // Load current users from initial state
-      const currentUsers: User[] = initialUsers;
-      
-      const user = currentUsers.find(u => u.email === email);
-      if (!user) {
-        setError('Invalid credentials. Please try again.');
-        return false;
-      }
-      if (user.role === 'student' && otp && otp !== '123456') {
-        setError('Invalid OTP. Please try again.');
-        return false;
-      }
+      const { token, user: userData } = response.data;
 
       // Persist to localStorage
-      setUser(user);
-      localStorage.setItem('sportsSyncUser', JSON.stringify(user));
+      localStorage.setItem('sportsSyncToken', token);
+      localStorage.setItem('sportsSyncUser', JSON.stringify(userData));
+      
+      setUser(userData);
       return true;
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
       return false;
     } finally {
       setIsLoading(false);

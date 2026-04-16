@@ -18,7 +18,9 @@ import {
   ShieldCheck,
   User,
   KeyRound,
-  ArrowLeft
+  ArrowLeft,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserRole } from '@/types';
@@ -33,13 +35,16 @@ export default function LoginPage() {
   // Login states
   const [identifier, setIdentifier] = useState(''); // Email or User ID
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   // Forgot password states
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStep, setForgotStep] = useState<'email' | 'otp'>('email');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -55,13 +60,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // For admin, we might need a specific handling for "User ID" vs "Email"
-    // Since mock logic uses email, we'll append @sports.edu if it's just 'admin'
-    let loginEmail = identifier;
-    if (activeTab === 'admin' && !identifier.includes('@')) {
-      loginEmail = `${identifier}@sports.edu`;
-    }
-
+    const loginEmail = identifier;
     const success = await login(loginEmail, password);
     if (success) {
       toast.success('Welcome back!');
@@ -121,7 +120,7 @@ export default function LoginPage() {
             <img src="/logo.png" alt="Logo" className="w-full h-full object-cover rounded-full" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">SportSync</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Sports Equip</h1>
             <p className="text-muted-foreground font-medium">Professional Equipment Management</p>
           </div>
         </div>
@@ -190,13 +189,20 @@ export default function LoginPage() {
                         <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           id="password"
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="pl-10 h-12 bg-card/50"
+                          className="pl-10 pr-10 h-12 bg-card/50"
                           required
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
                     {error && <p className="text-sm text-destructive font-medium text-center">{error}</p>}
@@ -207,7 +213,7 @@ export default function LoginPage() {
                       {isLoading ? 'Processing...' : 'Secure Log In'}
                     </Button>
                     <div className="text-center text-xs text-muted-foreground">
-                      Demo: {activeTab === 'admin' ? 'admin / any pass' : activeTab === 'staff' ? 'priya@sports.edu / any pass' : 'arjun@student.edu / any pass'}
+                      Demo: {activeTab === 'admin' ? 'admin / admin123' : activeTab === 'staff' ? 'priya@gmail.com / sports@123' : 'arjun@gmail.com / sports@123'}
                     </div>
                   </CardFooter>
                 </form>
@@ -266,29 +272,47 @@ export default function LoginPage() {
                       </div>
                     </div>
                     <div className="space-y-4">
-                       <div className="space-y-2">
+                      <div className="space-y-2">
                         <Label htmlFor="new-password">New Password</Label>
-                        <Input
-                          id="new-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          className="h-12"
-                          required
-                        />
+                        <div className="relative">
+                          <Input
+                            id="new-password"
+                            type={showNewPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="pr-10 h-12"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="confirm-password">Confirm Password</Label>
-                        <Input
-                          id="confirm-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="h-12"
-                          required
-                        />
+                        <div className="relative">
+                          <Input
+                            id="confirm-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="pr-10 h-12"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

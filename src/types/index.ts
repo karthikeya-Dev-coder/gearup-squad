@@ -19,10 +19,7 @@ export interface Equipment {
   totalQuantity: number;
   available: number;
   inUse: number;
-  damaged: number;
   assignedStaffId?: string;
-  image?: string;
-  description?: string;
 }
 
 export interface Booking {

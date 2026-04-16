@@ -62,7 +62,6 @@ export function AddEquipment({ onAdd, staff, open: controlledOpen, onOpenChange,
       totalQuantity: qty,
       available: qty,
       inUse: 0,
-      damaged: 0,
       assignedStaffId: form.assignedStaffId,
     };
 

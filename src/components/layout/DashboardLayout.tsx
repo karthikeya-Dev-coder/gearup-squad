@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { Menu } from 'lucide-react';
@@ -11,24 +11,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   
   // Mobile drawer state
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Desktop collapse state (persisted)
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebar_collapsed');
-    return saved ? JSON.parse(saved) : false;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('sidebar_collapsed', JSON.stringify(isCollapsed));
-  }, [isCollapsed]);
+  // Desktop sidebar hover state
+  const [sidebarHovered, setSidebarHovered] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
-  };
-
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
   };
 
   return (
@@ -36,7 +24,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile overlay */}
       <div 
         className={cn(
-          "fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm md:hidden transition-all duration-300",
+          "fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-md lg:hidden transition-all duration-500",
           sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         onClick={() => setSidebarOpen(false)} 
@@ -47,35 +35,37 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
         onLogout={handleLogout}
-        isCollapsed={isCollapsed}
-        onToggleCollapse={toggleCollapse}
+        onHoverChange={setSidebarHovered}
       />
 
-      {/* Main content wrapper — scrolls independently so sidebar stays sticky */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto transition-all duration-300 ease-in-out">
-        {/* Top Header */}
-        <header className="h-16 border-b border-border bg-card/50 backdrop-blur-md flex items-center px-4 md:px-6 gap-4 sticky top-0 z-30">
+
+      {/* Main content wrapper - Joined to sidebar */}
+      <div
+        className={cn(
+          "flex-1 flex flex-col min-w-0 overflow-y-auto transition-[padding] duration-500 ease-out bg-slate-950/50",
+          !sidebarHovered && "lg:pl-[80px]"
+        )}
+        style={sidebarHovered ? { paddingLeft: '256px' } : undefined}
+      >
+        {/* Top Header - Merged with Sidebar Colors */}
+        <header className="h-16 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl flex items-center pl-6 lg:pl-10 pr-4 lg:pr-6 gap-4 sticky top-0 z-30 transition-all duration-300">
           <button 
-            className="md:hidden p-2 rounded-lg hover:bg-muted text-foreground transition-colors" 
+            className="lg:hidden p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all duration-300 border border-white/5 shadow-inner" 
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-5 h-5" />
           </button>
           
           <div className="flex flex-col">
-            <h1 className="text-sm font-bold text-foreground capitalize tracking-tight">
+            <h1 className="text-sm font-bold text-white capitalize tracking-tight">
               {user?.role} Portal
             </h1>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-              SportSync Active Session
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+              Sports Equip Active Session
             </p>
           </div>
           
           <div className="ml-auto flex items-center gap-3">
-             <div className="hidden sm:flex flex-col items-end mr-2">
-                <span className="text-xs font-bold text-foreground leading-none">{user?.name}</span>
-                <span className="text-[10px] text-muted-foreground mt-1 capitalize">{user?.role}</span>
-             </div>
              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground text-xs font-black shadow-md">
                 {user?.name?.charAt(0)}
              </div>

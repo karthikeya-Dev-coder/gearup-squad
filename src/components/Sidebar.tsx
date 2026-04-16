@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, Package, Calendar, AlertTriangle,
-  User, LogOut, X, Activity, ClipboardList, Settings,
-  ChevronLeft, ChevronRight
+  LogOut, X, Activity, ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface NavItem {
   label: string;
@@ -43,130 +48,155 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
+  onHoverChange?: (hovered: boolean) => void;
 }
 
-export function Sidebar({ isOpen, onClose, onLogout, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, onLogout, onHoverChange }: SidebarProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const navItems = user?.role === 'admin' ? adminNav : user?.role === 'staff' ? staffNav : studentNav;
-  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    return window.innerWidth >= 768;
-  });
-
-  useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Keep mobile drawer full-width for readability.
-  const compactSidebar = isCollapsed && isDesktop;
 
   return (
-    <aside className={cn(
-      // Mobile: fixed drawer sliding in from left
-      // Desktop: sticky sidebar that stays on screen while content scrolls
-      "flex flex-col transition-all duration-300 ease-in-out sidebar-premium shrink-0",
-      "fixed inset-y-0 left-0 z-50",
-      "md:sticky md:top-0 md:h-screen md:relative md:inset-auto md:z-30",
-      compactSidebar ? "w-20" : "w-72",
-      isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-    )}>
-      {/* Sidebar Header with Large Logo */}
-      <div className={cn(
-        "flex items-center border-b border-sidebar-border/30 transition-all duration-300 overflow-hidden whitespace-nowrap shrink-0",
-        compactSidebar ? "md:px-4 px-6 md:h-24 h-28 md:justify-center" : "px-6 h-28 md:h-32"
+    <>
+      {/* Mobile Drawer */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-950/95 backdrop-blur-2xl border-r border-white/5 shadow-[20px_0_50px_rgba(0,0,0,0.5)] transition-transform duration-500 ease-out lg:hidden w-72",
+        isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className={cn(
-          "rounded-full overflow-hidden flex items-center justify-center bg-white shadow-xl border border-sidebar-border/10 p-1 transition-all duration-300 shrink-0",
-          compactSidebar ? "md:w-14 md:h-14 w-16 h-16" : "w-16 h-16 md:w-20 md:h-20"
-        )}>
-          <img
-            src="/logo.png"
-            alt="SportSync Logo"
-            className="w-full h-full rounded-full object-cover"
-          />
-        </div>
-
-        <div className={cn(
-          "flex flex-col ml-4 transition-all duration-300 ease-in-out",
-          compactSidebar ? "md:w-0 md:opacity-0 md:ml-0 md:invisible w-40 opacity-100 visible" : "w-40 opacity-100 visible"
-        )}>
-          <span className="font-black text-2xl tracking-tighter text-sidebar-primary-foreground leading-none">
-            SportSync
-          </span>
-          <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-sidebar-foreground/40 mt-1">
-            Management
-          </span>
-        </div>
-
-        <button
-          className="ml-auto md:hidden p-2 rounded-xl hover:bg-sidebar-accent/50 text-sidebar-foreground transition-colors absolute right-4"
-          onClick={onClose}
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Navigation Section */}
-      <nav className="flex-1 py-8 px-3 space-y-1.5 overflow-y-auto scrollbar-hide overflow-x-hidden">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === `/${user?.role}`}
-            onClick={onClose}
-            className={({ isActive }) => cn(
-              "flex items-center rounded-xl text-sm font-semibold transition-all duration-300 group nav-item-hover relative",
-              isActive ? "nav-item-active" : "text-sidebar-foreground/60 hover:text-sidebar-primary",
-              compactSidebar ? "md:px-0 md:justify-center px-3.5 py-3 md:h-12" : "px-3.5 py-3"
-            )}
-            title={compactSidebar ? item.label : ""}
-          >
-            <div className={cn(
-              "transition-all duration-300 group-hover:scale-110 shrink-0 flex items-center justify-center",
-              compactSidebar ? "md:w-12 md:h-12 w-6 h-6 mr-3 md:mr-0" : "w-6 h-6 mr-3"
-            )}>
-              <item.icon className={compactSidebar ? "md:w-6 md:h-6 w-5 h-5" : "w-5 h-5"} />
+        <div className="flex items-center justify-between p-6 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shadow-inner overflow-hidden shrink-0">
+              <img src="/logo.png" alt="Sports Equip Logo" className="w-full h-full object-cover rounded-full drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
             </div>
+            <span className="font-black text-2xl tracking-tighter text-white leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">SportsEquip</span>
+          </div>
+          <button onClick={onClose} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all duration-300">
+            <X className="w-5 h-5 text-white/50 hover:text-white" />
+          </button>
+        </div>
 
-            <span className={cn(
-               "tracking-tight whitespace-nowrap transition-all duration-300 ease-in-out",
-               compactSidebar ? "md:w-0 md:opacity-0 md:invisible w-48 opacity-100 visible" : "w-48 opacity-100 visible"
-            )}>
+        <nav className="flex-1 p-4 space-y-3 overflow-y-auto">
+          {navItems.map((item, index) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === `/${user?.role}`}
+              onClick={onClose}
+              className={({ isActive }) => cn(
+                "flex items-center gap-4 rounded-2xl px-5 py-4 text-sm font-bold transition-all duration-500 reveal-item",
+                isActive
+                  ? "bg-sky-500/20 text-white shadow-[0_0_20px_rgba(14,165,233,0.25)] border border-sky-500/20"
+                  : "text-slate-400 hover:bg-white/5 hover:text-white border border-transparent"
+              )}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <item.icon className={cn(
+                "w-5 h-5 transition-transform duration-300",
+                item.path === window.location.pathname ? "text-sky-400 scale-110 drop-shadow-[0_0_8px_rgba(14,165,233,0.6)]" : ""
+              )} />
               {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="p-6 mt-auto border-t border-white/5 bg-white/5 backdrop-blur-md">
+          <button 
+            onClick={onLogout} 
+            className="group flex items-center justify-center gap-3 w-full rounded-2xl px-4 py-4 text-sm font-black text-red-100 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all duration-500 shadow-lg shadow-red-500/5 hover:shadow-red-500/20"
+          >
+            <LogOut className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Desktop Floating Vertical Palette */}
+      <aside
+        onMouseEnter={() => onHoverChange?.(true)}
+        onMouseLeave={() => onHoverChange?.(false)}
+        className={cn(
+          "hidden lg:flex fixed left-0 inset-y-0 z-40",
+          "flex-col items-center py-8 px-2",
+          "bg-slate-950 border-r border-white/5",
+          "shadow-[8px_0_32px_rgba(0,0,0,0.3)] transition-all duration-200 ease-out group",
+          "hover:w-64 hover:px-4 w-[80px]"
+        )}>
+        <TooltipProvider delayDuration={0}>
+
+          <div
+            className="h-14 w-14 mb-8 flex items-center justify-center shrink-0 cursor-pointer group-hover:w-full group-hover:justify-start group-hover:p-1.5 transition-all duration-200 overflow-hidden"
+            onClick={() => navigate(`/${user?.role}`)}
+          >
+            <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shadow-inner group-hover:w-12 group-hover:h-12 transition-all duration-200 overflow-hidden shrink-0">
+              <img src="/logo.png" alt="Sports Equip Logo" className="w-full h-full object-cover rounded-full shrink-0 drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]" />
+            </div>
+            <span className="ml-3 font-black text-white tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden text-2xl">
+              SportsEquip
             </span>
+          </div>
 
-            {/* Active link indicator dot */}
-            <div className={cn(
-              "absolute right-4 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)] transition-all duration-300",
-              compactSidebar ? "md:opacity-0 md:scale-0 opacity-0 scale-0" : "opacity-0 scale-0 group-[.nav-item-active]:scale-100 group-[.nav-item-active]:opacity-100"
-            )}></div>
-          </NavLink>
-        ))}
-      </nav>
+          <nav className="flex flex-col gap-3 w-full flex-1">
+            {navItems.map((item) => (
+              <Tooltip key={item.path}>
+                <TooltipTrigger asChild>
+                  <NavLink
+                    to={item.path}
+                    end={item.path === `/${user?.role}`}
+                    className={({ isActive }) => cn(
+                      "relative flex items-center rounded-full transition-all duration-200 cursor-pointer",
+                      "group/item w-full h-[52px] overflow-hidden",
+                      isActive
+                        ? "bg-sky-500/40 text-white shadow-[0_0_25px_rgba(14,165,233,0.4)]"
+                        : "text-slate-400 hover:text-white hover:bg-sky-500/25"
+                    )}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <div className="absolute left-0 w-[52px] h-[52px] flex items-center justify-center shrink-0 z-10">
+                          <item.icon className={cn(
+                            "w-5 h-5 transition-all duration-300",
+                            isActive
+                              ? "text-sky-400 scale-110 drop-shadow-[0_0_10px_rgba(14,165,233,0.8)]"
+                              : "group-hover/item:scale-110 group-hover/item:text-sky-400 group-hover/item:drop-shadow-[0_0_8px_rgba(14,165,233,0.6)]"
+                          )} />
+                        </div>
+                        <span className="ml-14 font-extrabold text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden group-hover/item:text-sky-50 group-hover/item:drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
+                          {item.label}
+                        </span>
+                      </>
+                    )}
+                  </NavLink>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="group-hover:hidden bg-foreground text-background font-bold border-none shadow-xl ml-2 rounded-xl">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </nav>
 
+          <div className="w-full px-2 mt-auto pb-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onLogout}
+                  className="relative flex items-center rounded-2xl transition-all duration-500 group/btn w-full h-[52px] text-red-400 hover:bg-red-500 hover:text-white shadow-lg shadow-red-500/5"
+                >
+                  <div className="absolute left-0 w-[56px] h-[52px] flex items-center justify-center shrink-0 transition-transform duration-300 group-hover/btn:scale-110">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  <span className="ml-14 font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
+                    Sign Out
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="group-hover:hidden bg-red-600 text-white font-bold border-none shadow-xl ml-2 rounded-xl">
+                Sign Out
+              </TooltipContent>
+            </Tooltip>
+          </div>
 
-      {/* Bottom Logout Section */}
-      <div className={cn("mt-auto transition-all duration-300", compactSidebar ? "md:p-4 p-4" : "p-4")}>
-        <button
-          onClick={onLogout}
-          className={cn(
-            "flex items-center justify-center gap-2 rounded-xl font-bold text-sidebar-foreground/60 border border-sidebar-border/50 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all duration-300 w-full",
-            compactSidebar ? "md:w-12 md:h-12 md:p-0 md:text-[0px] md:border-0 md:bg-sidebar-accent/50 md:mx-auto px-4 py-3 text-sm" : "px-4 py-3 text-sm"
-          )}
-          title={compactSidebar ? "Sign Out" : ""}
-        >
-          <LogOut className={cn(compactSidebar ? "md:w-5 md:h-5 w-4 h-4 shrink-0" : "w-4 h-4 shrink-0")} />
-          <span className={cn(
-            "transition-all duration-300 whitespace-nowrap overflow-hidden",
-            compactSidebar ? "md:w-0 md:opacity-0 md:invisible w-auto opacity-100 visible" : "w-auto opacity-100 visible"
-          )}>Sign Out</span>
-        </button>
-      </div>
-    </aside>
+        </TooltipProvider>
+      </aside>
+    </>
   );
 }

@@ -1,25 +1,12 @@
-import React, { useState } from 'react';
-import { User, Equipment, Booking, Warning, ActivityLog } from '@/types';
+import React from 'react';
+import { Booking } from '@/types';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Plus, Calendar, Clock, Package, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Package, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useData } from '@/lib/BookingContext';
-import { useEquipment } from '@/lib/EquipmentContext';
-import { toast } from 'sonner';
 import { BookingTimer } from '@/components/dashboard/shared/BookingTimer';
-
-const timeSlots = [
-  '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
-  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00',
-  '16:00 - 17:00', '17:00 - 18:00',
-];
 
 const calculateDueAmount = (booking: Booking) => {
   if (booking.status !== 'overdue') return 0;
@@ -41,132 +28,16 @@ const calculateDueAmount = (booking: Booking) => {
 
 export default function StudentBookings() {
   const { user } = useAuth();
-  const { bookings, addBooking, isStudentSuspended } = useData();
-  const { equipment } = useEquipment();
-  
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
-  const [date, setDate] = useState('');
-  const [timeSlot, setTimeSlot] = useState('');
+  const { bookings, isStudentSuspended } = useData();
 
   const myBookings = bookings.filter(b => b.studentId === user?.id);
   const isSuspended = user ? isStudentSuspended(user.id) : false;
-
-  const handleCreateBooking = () => {
-    if (!selectedEquipmentId || !date || !timeSlot) {
-      return toast.error('Please fill in all fields');
-    }
-
-    const eq = equipment.find(e => e.id === selectedEquipmentId);
-    if (!eq) return;
-
-    if (eq.available <= 0) {
-      return toast.error('Equipment currently out of stock');
-    }
-
-    if (user) {
-      addBooking({
-        id: `bk-${Date.now()}-${selectedEquipmentId}`,
-        studentId: user.id,
-        studentName: user.name,
-        equipmentId: eq.id,
-        equipmentName: eq.name,
-        date,
-        timeSlot,
-        quantity: 1,
-        status: 'approved',
-        createdAt: new Date().toISOString()
-      });
-
-      toast.success(`Successfully booked ${eq.name}!`);
-      setDialogOpen(false);
-      setSelectedEquipmentId('');
-      setDate('');
-      setTimeSlot('');
-    }
-  };
 
   return (
     <div className="space-y-6">
       <PageHeader 
         title="My Bookings" 
-        description="View your booking history and create new bookings" 
-        action={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button disabled={isSuspended} className="gradient-primary text-primary-foreground font-bold shadow-lg shadow-primary/20">
-                <Plus className="w-4 h-4 mr-2" /> New Booking
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black gradient-text">Create Booking</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6 py-4">
-                {isSuspended && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                    <p className="text-xs text-destructive">Account suspended. Booking is disabled.</p>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-bold">
-                    <Package className="w-4 h-4 text-primary" /> Select Equipment
-                  </Label>
-                  <Select value={selectedEquipmentId} onValueChange={setSelectedEquipmentId}>
-                    <SelectTrigger className="rounded-xl border-border bg-muted/50 focus:ring-primary/20">
-                      <SelectValue placeholder="Choose an item..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipment.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id} disabled={eq.available === 0}>
-                          {eq.name} ({eq.available} left)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-bold">
-                    <Calendar className="w-4 h-4 text-primary" /> Date
-                  </Label>
-                  <Input 
-                    type="date" 
-                    value={date} 
-                    onChange={e => setDate(e.target.value)}
-                    className="rounded-xl border-border bg-muted/50 focus:ring-primary/20"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-bold">
-                    <Clock className="w-4 h-4 text-primary" /> Time Slot
-                  </Label>
-                  <Select value={timeSlot} onValueChange={setTimeSlot}>
-                    <SelectTrigger className="rounded-xl border-border bg-muted/50 focus:ring-primary/20">
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeSlots.map(ts => (
-                        <SelectItem key={ts} value={ts}>{ts}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button 
-                  onClick={handleCreateBooking} 
-                  disabled={isSuspended}
-                  className="w-full h-12 rounded-xl gradient-primary text-primary-foreground font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
-                >
-                  Confirm Booking
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        }
+        description="View your sports equipment booking history" 
       />
 
       {isSuspended && (
@@ -204,7 +75,7 @@ export default function StudentBookings() {
                         <Package className="w-8 h-8 opacity-20" />
                       </div>
                       <p className="text-lg">No bookings found yet.</p>
-                      <p className="text-xs">Your history will appear here once you book some equipment.</p>
+                      <p className="text-xs">Go to the Equipment page to make your first booking!</p>
                     </div>
                   </TableCell>
                 </TableRow>

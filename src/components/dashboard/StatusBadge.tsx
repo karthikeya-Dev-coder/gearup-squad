@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-type StatusVariant = 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue' | 'active' | 'suspended' | 'available' | 'in-use' | 'damaged';
+type StatusVariant = 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue' | 'active' | 'suspended' | 'available' | 'in-use';
 
 const variantStyles: Record<StatusVariant, string> = {
   pending: 'bg-warning/10 text-warning border-warning/20',
@@ -14,7 +14,6 @@ const variantStyles: Record<StatusVariant, string> = {
   suspended: 'bg-destructive/10 text-destructive border-destructive/20',
   available: 'bg-success/10 text-success border-success/20',
   'in-use': 'bg-info/10 text-info border-info/20',
-  damaged: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
