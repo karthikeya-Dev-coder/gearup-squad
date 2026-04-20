@@ -1,45 +1,114 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Equipment } from '@/types';
-
-const initialEquipment: Equipment[] = [
-  { id: 'eq-1', name: 'Cricket Bat', category: 'Cricket', totalQuantity: 30, available: 18, inUse: 10, assignedStaffId: 'staff-1' },
-  { id: 'eq-2', name: 'Football', category: 'Football', totalQuantity: 40, available: 25, inUse: 12, assignedStaffId: 'staff-2' },
-  { id: 'eq-3', name: 'Volleyball', category: 'Volleyball', totalQuantity: 20, available: 12, inUse: 6, assignedStaffId: 'staff-2' },
-  { id: 'eq-4', name: 'Tennis Racket', category: 'Tennis', totalQuantity: 25, available: 18, inUse: 5, assignedStaffId: 'staff-4' },
-  { id: 'eq-5', name: 'Badminton Kit', category: 'Badminton', totalQuantity: 35, available: 22, inUse: 10, assignedStaffId: 'staff-3' },
-  { id: 'eq-6', name: 'Cricket Pads', category: 'Cricket', totalQuantity: 15, available: 10, inUse: 4, assignedStaffId: 'staff-1' },
-  { id: 'eq-7', name: 'Basketball', category: 'Basketball', totalQuantity: 25, available: 15, inUse: 8, assignedStaffId: 'staff-2' },
-  { id: 'eq-8', name: 'Yoga Mat', category: 'Fitness', totalQuantity: 50, available: 45, inUse: 5, assignedStaffId: 'staff-5' },
-  { id: 'eq-9', name: 'Table Tennis Racket', category: 'Indoor', totalQuantity: 20, available: 16, inUse: 4, assignedStaffId: 'staff-5' },
-  { id: 'eq-10', name: 'Swimming Goggles', category: 'Aquatics', totalQuantity: 15, available: 12, inUse: 3, assignedStaffId: 'staff-5' },
-];
+import api from './api';
 
 interface EquipmentContextType {
   equipment: Equipment[];
-  addEquipment: (item: Equipment) => void;
-  updateEquipment: (updated: Equipment) => void;
-  deleteEquipment: (id: string) => void;
+  staffRequests: any[];
+  isLoading: boolean;
+  error: string | null;
+  addEquipment: (item: Partial<Equipment>) => Promise<void>;
+  updateEquipment: (id: string, updated: Partial<Equipment>) => Promise<void>;
+  deleteEquipment: (id: string) => Promise<void>;
+  refreshEquipment: () => Promise<void>;
+  addStaffRequest: (req: any) => Promise<void>;
+  updateStaffRequestStatus: (id: string, status: string) => Promise<void>;
+  refreshStaffRequests: () => Promise<void>;
 }
 
 const EquipmentContext = createContext<EquipmentContextType | undefined>(undefined);
 
 export function EquipmentProvider({ children }: { children: ReactNode }) {
-  const [equipment, setEquipment] = useState<Equipment[]>(initialEquipment);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [staffRequests, setStaffRequests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addEquipment = (item: Equipment) => {
-    setEquipment(prev => [...prev, item]);
+  const fetchEquipment = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get('/equipment');
+      setEquipment(response.data);
+    } catch (err: any) {
+      console.error('Failed to fetch equipment:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchStaffRequests = useCallback(async () => {
+    try {
+      const response = await api.get('/staff-requests');
+      setStaffRequests(response.data);
+    } catch (err: any) {
+      console.error('Failed to fetch staff requests:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEquipment();
+    fetchStaffRequests();
+  }, [fetchEquipment, fetchStaffRequests]);
+
+  const addEquipment = async (item: Partial<Equipment>) => {
+    try {
+      const response = await api.post('/equipment', item);
+      setEquipment(prev => [...prev, response.data]);
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to add equipment');
+    }
   };
 
-  const updateEquipment = (updated: Equipment) => {
-    setEquipment(prev => prev.map(e => e.id === updated.id ? updated : e));
+  const updateEquipment = async (id: string, updated: Partial<Equipment>) => {
+    try {
+      const response = await api.patch(`/equipment/${id}`, updated);
+      setEquipment(prev => prev.map(e => e.id === id ? response.data : e));
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to update equipment');
+    }
   };
 
-  const deleteEquipment = (id: string) => {
-    setEquipment(prev => prev.filter(e => e.id !== id));
+  const deleteEquipment = async (id: string) => {
+    try {
+      await api.delete(`/equipment/${id}`);
+      setEquipment(prev => prev.filter(e => e.id !== id));
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to delete equipment');
+    }
+  };
+
+  const addStaffRequest = async (staffReq: any) => {
+    try {
+      const response = await api.post('/staff-requests', staffReq);
+      setStaffRequests(prev => [...prev, response.data]);
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to submit request');
+    }
+  };
+
+  const updateStaffRequestStatus = async (id: string, status: string) => {
+    try {
+      const response = await api.patch(`/staff-requests/${id}/status`, { status });
+      setStaffRequests(prev => prev.map(r => r.id === id ? response.data : r));
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to update request status');
+    }
   };
 
   return (
-    <EquipmentContext.Provider value={{ equipment, addEquipment, updateEquipment, deleteEquipment }}>
+    <EquipmentContext.Provider value={{ 
+      equipment, 
+      staffRequests,
+      isLoading, 
+      error, 
+      addEquipment, 
+      updateEquipment, 
+      deleteEquipment,
+      refreshEquipment: fetchEquipment,
+      addStaffRequest,
+      updateStaffRequestStatus,
+      refreshStaffRequests: fetchStaffRequests
+    }}>
       {children}
     </EquipmentContext.Provider>
   );

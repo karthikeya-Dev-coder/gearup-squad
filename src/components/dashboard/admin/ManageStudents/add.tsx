@@ -8,11 +8,12 @@ import { User } from '@/types';
 import { toast } from 'sonner';
 
 interface AddStudentProps {
-  onAdd: (student: User) => void;
+  onAdd: (student: Partial<User>) => Promise<void>;
 }
 
 export function AddStudent({ onAdd }: AddStudentProps) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(0); // 0: Form, 1: Success
   const [form, setForm] = useState({
     name: '',
@@ -26,42 +27,50 @@ export function AddStudent({ onAdd }: AddStudentProps) {
     setStep(1); // Move to security checkpoint
   };
 
-  const handleSendCredentials = () => {
-    const newStudent: User = {
-      id: `student-${Date.now()}`,
-      name: form.name,
-      email: form.email,
-      role: 'student',
-      createdAt: new Date().toISOString().split('T')[0],
-      isActive: true,
-    };
-
-    onAdd(newStudent);
-    toast.success(`Temporary password sent to ${form.email}`, {
-      description: 'The student can now log in using the credentials in their university email.',
-      duration: 5000,
-    });
-    
-    // Reset and close
-    setForm({ name: '', email: '' });
-    setStep(0);
-    setOpen(false);
-  };
-
-  const handleFinishWithoutSending = () => {
-    const newStudent: User = {
-        id: `student-${Date.now()}`,
+  const handleSendCredentials = async () => {
+    setIsSubmitting(true);
+    try {
+      await onAdd({
         name: form.name,
         email: form.email,
         role: 'student',
-        createdAt: new Date().toISOString().split('T')[0],
         isActive: true,
-      };
-  
-    onAdd(newStudent);
-    setForm({ name: '', email: '' });
-    setStep(0);
-    setOpen(false);
+        sendEmail: true,
+      });
+      toast.success(`Temporary password sent to ${form.email}`, {
+        description: 'The student can now log in using the credentials in their university email.',
+        duration: 5000,
+      });
+      
+      // Reset and close
+      setForm({ name: '', email: '' });
+      setStep(0);
+      setOpen(false);
+    } catch (error) {
+      toast.error('Failed to add student');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFinishWithoutSending = async () => {
+    setIsSubmitting(true);
+    try {
+      await onAdd({
+        name: form.name,
+        email: form.email,
+        role: 'student',
+        isActive: true,
+        sendEmail: false,
+      });
+      setForm({ name: '', email: '' });
+      setStep(0);
+      setOpen(false);
+    } catch (error) {
+      toast.error('Failed to add student');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -104,7 +113,7 @@ export function AddStudent({ onAdd }: AddStudentProps) {
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick= {handleCreate} className="gradient-primary text-white font-bold px-6">Create Account</Button>
+              <Button onClick={handleCreate} className="gradient-primary text-white font-bold px-6">Create Account</Button>
             </div>
           </>
         ) : (

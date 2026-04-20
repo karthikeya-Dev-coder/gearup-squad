@@ -66,7 +66,7 @@ export default function StudentDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Equipment" value={equipment.reduce((a, e) => a + e.totalQuantity, 0)} icon={Package} trend="Live Inventory" color="indigo" />
-        <StatCard title="My Active Bookings" value={myBookings.filter(b => b.status === 'approved' || b.status === 'overdue').length} icon={Calendar} trend="Booked Now" color="amber" />
+        <StatCard title="My Active Bookings" value={myBookings.filter(b => ['approved', 'overdue', 'pending'].includes(b.status?.toLowerCase())).length} icon={Calendar} trend="Booked Now" color="amber" />
         <StatCard title="Warnings" value={`${myWarnings.length}/3`} icon={AlertTriangle} trend="Penalty Status" color="rose" />
         <StatCard title="Unpaid Fines" value={`₹${unpaidFineTotal}`} icon={Clock} trend="Current Dues" color="info" />
       </div>

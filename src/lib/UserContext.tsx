@@ -1,56 +1,109 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '@/types';
-
-export const initialUsers: User[] = [
-  { id: 'admin-1', name: 'Dr. Rajesh Kumar', email: 'admin@sports.edu', role: 'admin', department: 'Sports Administration', createdAt: '2024-01-01', isActive: true },
-  
-  // Staff
-  { id: 'staff-1', name: 'Priya Sharma', email: 'priya@sports.edu', role: 'staff', department: 'Cricket', createdAt: '2024-01-15', isActive: true },
-  { id: 'staff-2', name: 'Amit Patel', email: 'amit@sports.edu', role: 'staff', department: 'Football', createdAt: '2024-02-01', isActive: true },
-  { id: 'staff-3', name: 'Sneha Reddy', email: 'sneha@sports.edu', role: 'staff', department: 'Badminton', createdAt: '2024-02-15', isActive: true },
-  { id: 'staff-4', name: 'Vikram Singh', email: 'vikram@sports.edu', role: 'staff', department: 'Tennis', createdAt: '2024-03-01', isActive: true },
-  { id: 'staff-5', name: 'Sunil Gavaskar', email: 'sunil@sports.edu', role: 'staff', department: 'General Sports', createdAt: '2024-03-10', isActive: true },
-  
-  // Students
-  { id: 'student-1', name: 'Arjun Mehta', email: 'arjun@student.edu', role: 'student', phone: '+91 9876543210', createdAt: '2024-03-15', isActive: true },
-  { id: 'student-2', name: 'Kavya Nair', email: 'kavya@student.edu', role: 'student', phone: '+91 9876543211', createdAt: '2024-03-20', isActive: true },
-  { id: 'student-3', name: 'Rohan Gupta', email: 'rohan@student.edu', role: 'student', phone: '+91 9876543212', createdAt: '2024-04-01', isActive: true },
-  { id: 'student-4', name: 'Meera Joshi', email: 'meera@student.edu', role: 'student', phone: '+91 9876543213', createdAt: '2024-04-05', isActive: false },
-  { id: 'student-5', name: 'Rahul Dravid', email: 'rahul@student.edu', role: 'student', phone: '+91 9876543214', createdAt: '2024-04-08', isActive: true },
-  { id: 'student-6', name: 'Ananya Pandey', email: 'ananya@student.edu', role: 'student', phone: '+91 9876543215', createdAt: '2024-04-10', isActive: true },
-  { id: 'student-7', name: 'Siddharth Malhotra', email: 'siddharth@student.edu', role: 'student', phone: '+91 9876543216', createdAt: '2024-04-11', isActive: true },
-  { id: 'student-8', name: 'Isha Singh', email: 'isha@student.edu', role: 'student', phone: '+91 9876543217', createdAt: '2024-04-12', isActive: true },
-  { id: 'student-9', name: 'Varun Dhawan', email: 'varun@student.edu', role: 'student', phone: '+91 9876543218', createdAt: '2024-04-13', isActive: true },
-  { id: 'student-10', name: 'Sara Ali Khan', email: 'sara@student.edu', role: 'student', phone: '+91 9876543219', createdAt: '2024-04-14', isActive: true },
-  { id: 'student-11', name: 'Karthik Aryan', email: 'karthik@student.edu', role: 'student', phone: '+91 7654321098', createdAt: '2024-04-15', isActive: true },
-];
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
 interface UserContextType {
   users: User[];
-  addUser: (user: User) => void;
-  updateUser: (user: User) => void;
-  deleteUser: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  addUser: (user: Partial<User>) => Promise<void>;
+  updateUser: (user: Partial<User> & { id: string }) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  bulkImportUsers: (students: Partial<User>[], sendCredentials: boolean) => Promise<void>;
+  refreshUsers: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addUser = (user: User) => {
-    setUsers(prev => [...prev, user]);
+  const fetchUsers = useCallback(async () => {
+    const token = localStorage.getItem('sportsSyncToken');
+    if (!token) return;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data);
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      setError(err.response?.data?.message || 'Failed to fetch users');
+      toast.error('Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const addUser = async (userData: Partial<User>) => {
+    try {
+      const response = await api.post('/users', userData);
+      setUsers(prev => [...prev, response.data]);
+      toast.success('User added successfully');
+    } catch (err: any) {
+      console.error('Error adding user:', err);
+      toast.error(err.response?.data?.message || 'Failed to add user');
+      throw err;
+    }
   };
 
-  const updateUser = (updated: User) => {
-    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+  const updateUser = async (updatedData: Partial<User> & { id: string }) => {
+    try {
+      const response = await api.patch(`/users/${updatedData.id}`, updatedData);
+      setUsers(prev => prev.map(u => u.id === updatedData.id ? response.data : u));
+      toast.success('User updated successfully');
+    } catch (err: any) {
+      console.error('Error updating user:', err);
+      toast.error(err.response?.data?.message || 'Failed to update user');
+      throw err;
+    }
   };
 
-  const deleteUser = (id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
+  const deleteUser = async (id: string) => {
+    try {
+      await api.delete(`/users/${id}`);
+      setUsers(prev => prev.filter(u => u.id !== id));
+      toast.success('User deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting user:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete user');
+      throw err;
+    }
+  };
+
+  const bulkImportUsers = async (students: Partial<User>[], sendCredentials: boolean) => {
+    try {
+      const response = await api.post('/users/bulk-import', { students, sendCredentials });
+      // Results summary could be handled here if needed, but for now we refresh
+      await fetchUsers();
+      const importedCount = response.data.filter((r: any) => r.status === 'imported').length;
+      toast.success(`Successfully imported ${importedCount} students`);
+    } catch (err: any) {
+      console.error('Error bulk importing users:', err);
+      toast.error(err.response?.data?.message || 'Failed to bulk import students');
+      throw err;
+    }
   };
 
   return (
-    <UserContext.Provider value={{ users, addUser, updateUser, deleteUser }}>
+    <UserContext.Provider value={{ 
+      users, 
+      isLoading, 
+      error, 
+      addUser, 
+      updateUser, 
+      deleteUser, 
+      bulkImportUsers,
+      refreshUsers: fetchUsers 
+    }}>
       {children}
     </UserContext.Provider>
   );
@@ -63,3 +116,4 @@ export function useUsers() {
   }
   return context;
 }
+

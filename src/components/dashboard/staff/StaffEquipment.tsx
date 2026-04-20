@@ -15,14 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useEquipment } from '@/lib/EquipmentContext';
-import { addStaffEquipmentRequest, getStaffEquipmentRequests } from '@/lib/staffEquipmentRequestsStorage';
 import { SendHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 export default function StaffEquipment() {
   const { user } = useAuth();
-  const { equipment: allEquipment } = useEquipment();
+  const { equipment: allEquipment, staffRequests, addStaffRequest } = useEquipment();
 
   const assignedEquipment = allEquipment.filter(
     e => e.assignedStaffId != null && e.assignedStaffId === user?.id
@@ -32,25 +31,11 @@ export default function StaffEquipment() {
   const [reqName, setReqName] = useState('');
   const [reqQty, setReqQty] = useState('1');
 
-  const [myPendingRequests, setMyPendingRequests] = useState<StaffEquipmentRequest[]>([]);
+  const myPendingRequests = staffRequests.filter(
+    r => r.staffId === user?.id && r.status === 'pending'
+  );
 
-  const refreshMyRequests = useCallback(() => {
-    if (!user?.id) {
-      setMyPendingRequests([]);
-      return;
-    }
-    setMyPendingRequests(
-      getStaffEquipmentRequests().filter(r => r.staffId === user.id && r.status === 'pending')
-    );
-  }, [user?.id]);
-
-  useEffect(() => {
-    refreshMyRequests();
-    window.addEventListener('staff-equipment-requests-changed', refreshMyRequests);
-    return () => window.removeEventListener('staff-equipment-requests-changed', refreshMyRequests);
-  }, [refreshMyRequests]);
-
-  const submitRequest = () => {
+  const submitRequest = async () => {
     if (!user) {
       toast.error('Sign in required');
       return;
@@ -65,16 +50,20 @@ export default function StaffEquipment() {
       toast.error('Enter a valid quantity (1 or more)');
       return;
     }
-    addStaffEquipmentRequest({
-      staffId: user.id,
-      staffName: user.name,
-      equipmentName: name,
-      quantity: qty,
-    });
-    toast.success('Request sent to admin');
-    setReqName('');
-    setReqQty('1');
-    setRequestOpen(false);
+    
+    try {
+      await addStaffRequest({
+        staffId: user.id,
+        equipmentName: name,
+        quantity: qty,
+      });
+      toast.success('Request sent to admin');
+      setReqName('');
+      setReqQty('1');
+      setRequestOpen(false);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   return (

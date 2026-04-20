@@ -13,7 +13,7 @@ export default function StaffDashboard() {
   const { equipment } = useEquipment();
 
   const myEquipment = equipment.filter(e => e.assignedStaffId === user?.id);
-  const returnBookings = bookings.filter(b => b.status === 'approved' || b.status === 'overdue');
+  const returnBookings = bookings.filter(b => ['approved', 'overdue', 'pending'].includes(b.status?.toLowerCase()));
   const recentBookings = bookings
     .slice()
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

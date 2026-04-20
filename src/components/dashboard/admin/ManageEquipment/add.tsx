@@ -9,7 +9,7 @@ import { Equipment, User } from '@/types';
 import { toast } from 'sonner';
 
 interface AddEquipmentProps {
-  onAdd: (item: Equipment) => void;
+  onAdd: (item: Partial<Equipment>) => Promise<void>;
   staff: User[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -20,6 +20,7 @@ interface AddEquipmentProps {
 export function AddEquipment({ onAdd, staff, open: controlledOpen, onOpenChange, prefill, onAdded }: AddEquipmentProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [step, setStep] = useState(0); // 0: Form, 1: Success
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -45,7 +46,7 @@ export function AddEquipment({ onAdd, staff, open: controlledOpen, onOpenChange,
     });
   }, [open, prefill]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name || !form.category || !form.totalQuantity) {
       return toast.error('Please fill in all required fields');
     }
@@ -55,22 +56,22 @@ export function AddEquipment({ onAdd, staff, open: controlledOpen, onOpenChange,
       return toast.error('Please enter a valid quantity');
     }
 
-    const newItem: Equipment = {
-      id: `eq-${Date.now()}`,
-      name: form.name,
-      category: form.category,
-      totalQuantity: qty,
-      available: qty,
-      inUse: 0,
-      assignedStaffId: form.assignedStaffId,
-    };
-
-    onAdd(newItem);
-    onAdded?.();
-    setStep(1);
-    toast.success('Equipment inventory updated', {
-      description: `${form.name} has been added to the system.`,
-    });
+    setIsSubmitting(true);
+    try {
+      await onAdd({
+        name: form.name,
+        category: form.category,
+        totalQuantity: qty,
+        assignedStaffId: form.assignedStaffId || undefined,
+      });
+      
+      onAdded?.();
+      setStep(1);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to sync with inventory');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFinish = () => {
@@ -87,7 +88,7 @@ export function AddEquipment({ onAdd, staff, open: controlledOpen, onOpenChange,
           Add Equipment
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-card border-border shadow-elevated">
+      <DialogContent className="w-[95vw] sm:max-w-md bg-card border-border shadow-elevated">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">
             {step === 0 ? 'Add New Equipment' : 'Item Added Successfully!'}
@@ -142,8 +143,10 @@ export function AddEquipment({ onAdd, staff, open: controlledOpen, onOpenChange,
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button onClick={handleAdd} className="gradient-primary text-white font-bold px-6">Add Item</Button>
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button onClick={handleAdd} disabled={isSubmitting} className="gradient-primary text-white font-bold px-6 min-w-[120px]">
+                {isSubmitting ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Adding...</span> : 'Add Item'}
+              </Button>
             </div>
           </>
         ) : (

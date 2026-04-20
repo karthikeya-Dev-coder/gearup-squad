@@ -1,16 +1,14 @@
-import { User, Equipment, Booking, Warning, ActivityLog, UserRole } from '@/types';
+import { UserRole } from '@/types';
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { initialUsers } from '@/lib/UserContext';
 import api from '@/lib/api';
 
-
-
-
 interface AuthContextType {
-  user: User | null;
+  user: any | null;
   isLoading: boolean;
+  isTransitioning: boolean;
+  loaderMessage: string;
   error: string | null;
-  login: (email: string, password?: string, otp?: string) => Promise<boolean>;
+  login: (email: string, password?: string, expectedRole?: string) => Promise<{ success: boolean; role?: string }>;
   logout: () => void;
   detectRole: (email: string) => UserRole | null;
 }
@@ -18,13 +16,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Check if user session exists in localStorage on initial load
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = typeof window !== 'undefined' ? localStorage.getItem('sportsSyncUser') : null;
+  const [user, setUser] = useState<any | null>(() => {
+    const savedUser = typeof window !== 'undefined' ? sessionStorage.getItem('sportsSyncUser') : null;
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [loaderMessage, setLoaderMessage] = useState('Loading...');
   const [error, setError] = useState<string | null>(null);
 
   const detectRole = useCallback((email: string): UserRole | null => {
@@ -34,38 +33,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, []);
 
-  const login = useCallback(async (email: string, password?: string) => {
+  const login = useCallback(async (email: string, password?: string, expectedRole?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      // In Real API, we call /auth/login
       const response = await api.post('/auth/login', { email, password });
-      
       const { token, user: userData } = response.data;
 
-      // Persist to localStorage
-      localStorage.setItem('sportsSyncToken', token);
-      localStorage.setItem('sportsSyncUser', JSON.stringify(userData));
-      
+      // Validate role BEFORE showing loader or saving session
+      if (expectedRole && userData.role !== expectedRole) {
+        throw new Error(`Invalid credentials. Please verify your login type and try again.`);
+      }
+
+      sessionStorage.setItem('sportsSyncToken', token);
+      sessionStorage.setItem('sportsSyncUser', JSON.stringify(userData));
+
+      // Show full-screen transition loader before entering dashboard
+      setLoaderMessage(`Welcome back! Entering ${userData.role} portal...`);
+      setIsTransitioning(true);
+      await new Promise(resolve => setTimeout(resolve, 1800));
+      setIsTransitioning(false);
+
       setUser(userData);
-      return true;
+      return { success: true, role: userData.role as string };
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
-      return false;
+      setError(err.response?.data?.message || err.message || 'Invalid credentials. Please try again.');
+      return { success: false };
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    setLoaderMessage('Signing out securely...');
+    setIsTransitioning(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsTransitioning(false);
     setUser(null);
-    localStorage.removeItem('sportsSyncUser');
+    sessionStorage.removeItem('sportsSyncUser');
+    sessionStorage.removeItem('sportsSyncToken');
     setError(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout, detectRole }}>
+    <AuthContext.Provider value={{ user, isLoading, isTransitioning, loaderMessage, error, login, logout, detectRole }}>
       {children}
     </AuthContext.Provider>
   );

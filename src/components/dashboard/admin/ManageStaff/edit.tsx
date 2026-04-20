@@ -5,15 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface EditStaffProps {
   staff: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (updatedStaff: User) => void;
+  onUpdate: (updatedStaff: Partial<User> & { id: string }) => Promise<void>;
 }
 
 export function EditStaff({ staff, open, onOpenChange, onUpdate }: EditStaffProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -32,16 +34,22 @@ export function EditStaff({ staff, open, onOpenChange, onUpdate }: EditStaffProp
     }
   }, [staff]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!staff) return;
     if (!form.name || !form.email) return toast.error('Name and Email are required');
     
-    onUpdate({
-      ...staff,
-      ...form
-    });
-    onOpenChange(false);
-    toast.success('Staff details updated successfully');
+    setIsSubmitting(true);
+    try {
+      await onUpdate({
+        id: staff.id,
+        ...form
+      });
+      onOpenChange(false);
+    } catch (error) {
+      // Error handled by UserContext
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -90,10 +98,14 @@ export function EditStaff({ staff, open, onOpenChange, onUpdate }: EditStaffProp
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} className="gradient-primary text-white font-bold">Save Changes</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isSubmitting} className="gradient-primary text-white font-bold min-w-[120px]">
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

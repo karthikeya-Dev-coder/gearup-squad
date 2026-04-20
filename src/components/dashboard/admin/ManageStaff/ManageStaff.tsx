@@ -1,10 +1,8 @@
-import { User, Equipment, Booking, Warning, ActivityLog } from '@/types';
+import { User } from '@/types';
 import React, { useState } from 'react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
-import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import {
@@ -15,17 +13,17 @@ import {
   SelectValue
 } from '@/components/ui/select';
 
-import { UserPlus, Mail, Search, Edit, Trash2, Eye, Filter, X, Users, UserCheck, Building2, UserX } from 'lucide-react';
-import { toast } from 'sonner';
+import { Search, Edit, Trash2, Eye, X, Loader2, AlertCircle } from 'lucide-react';
 import { ViewStaff } from './view';
 import { EditStaff } from './edit';
 import { DeleteStaff } from './delete';
 import { AddStaff } from './add';
 
 import { useUsers } from '@/lib/UserContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ManageStaff() {
-  const { users, addUser, updateUser, deleteUser } = useUsers();
+  const { users, isLoading, error, addUser, updateUser, deleteUser, refreshUsers } = useUsers();
   
   const staff = users.filter(u => u.role === 'staff');
   const [search, setSearch] = useState('');
@@ -36,7 +34,7 @@ export default function ManageStaff() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const departments = ['All', ...Array.from(new Set(staff.map(s => s.department)))];
+  const departments = ['All', ...Array.from(new Set(staff.map(s => s.department || 'General')))];
 
   const filtered = staff.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -61,41 +59,49 @@ export default function ManageStaff() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const handleAdd = (newStaff: User) => {
-    addUser(newStaff);
+  const handleAdd = async (newStaff: Partial<User>) => {
+    await addUser({ ...newStaff, role: 'staff' });
   };
 
-  const handleUpdate = (updatedStaff: User) => {
-    updateUser(updatedStaff);
+  const handleUpdate = async (updatedStaff: Partial<User> & { id: string }) => {
+    await updateUser(updatedStaff);
   };
 
-  const handleDelete = (id: string) => {
-    deleteUser(id);
-    toast.success('Staff removed successfully');
+  const handleDelete = async (id: string) => {
+    await deleteUser(id);
   };
 
-  const handleSendCredentials = (s: User) => {
-    toast.success(`Credentials sent to ${s.email}`, {
-      description: `User ID: ${s.id} | Password: sports@123`,
-      duration: 5000,
-    });
-  };
-
-  const activeCount = staff.filter(s => s.isActive).length;
-  const inactiveCount = staff.length - activeCount;
-  const departmentCount = new Set(staff.map(s => s.department)).size;
+  if (isLoading && users.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-muted-foreground font-medium animate-pulse">Loading staff members...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Manage Staff"
-        description={`${staff.length} staff members`}
+        description={`${staff.length} staff members registered in the system`}
         action={<AddStaff onAdd={handleAdd} />}
       />
 
+      {error && (
+        <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button variant="outline" size="sm" onClick={() => refreshUsers()} className="ml-4 h-7 text-xs">
+              Try Again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-
-      {/* Advanced Filter Section with "Shade" look */}
+      {/* Advanced Filter Section */}
       <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-border p-5 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:max-w-md group">
@@ -111,7 +117,7 @@ export default function ManageStaff() {
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2 bg-background/50 p-1 rounded-xl border border-border/50 shadow-inner-sm">
               <Select value={filterDept} onValueChange={setFilterDept}>
-                <SelectTrigger className="w-[140px] h-9 bg-transparent border-0 focus:ring-0 text-xs font-bold ring-offset-0">
+                <SelectTrigger className="w-[140px] h-9 bg-transparent border-0 focus:ring-0 text-xs font-bold ring-offset-0 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer rounded-lg">
                   <SelectValue placeholder="Department" />
                 </SelectTrigger>
                 <SelectContent>
@@ -126,7 +132,7 @@ export default function ManageStaff() {
               <div className="w-px h-4 bg-border/50 mx-1" />
 
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[130px] h-9 bg-transparent border-0 focus:ring-0 text-xs font-bold ring-offset-0">
+                <SelectTrigger className="w-[130px] h-9 bg-transparent border-0 focus:ring-0 text-xs font-bold ring-offset-0 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer rounded-lg">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -153,55 +159,71 @@ export default function ManageStaff() {
 
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
         <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="hidden sm:table-cell">Department</TableHead>
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedStaff.map(s => (
-              <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell className="text-muted-foreground">{s.email}</TableCell>
-                <TableCell className="hidden sm:table-cell">{s.department}</TableCell>
-                <TableCell className="hidden sm:table-cell"><StatusBadge status={s.isActive ? 'Active' : 'Suspended'} /></TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-primary hover:text-primary hover:bg-primary/10"
-                      onClick={() => { setSelectedStaff(s); setIsViewOpen(true); }}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-indigo-600 hover:text-indigo-600 hover:bg-indigo-50"
-                      onClick={() => { setSelectedStaff(s); setIsEditOpen(true); }}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => { setSelectedStaff(s); setIsDeleteOpen(true); }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px] sm:w-[80px]">No.</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="hidden lg:table-cell">Department</TableHead>
+                <TableHead className="hidden sm:table-cell">Status</TableHead>
+                <TableHead className="text-right px-4 sm:px-6">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginatedStaff.length > 0 ? (
+                paginatedStaff.map((s, index) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-bold text-muted-foreground/30">
+                      {((currentPage - 1) * itemsPerPage) + index + 1}
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">{s.name}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{s.email}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs">{s.department || 'N/A'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <StatusBadge status={s.isActive ? 'Active' : 'Suspended'} />
+                    </TableCell>
+                    <TableCell className="text-right px-4 sm:px-6">
+                      <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-8 h-8 sm:w-9 sm:h-9 bg-transparent hover:bg-transparent text-emerald-500 hover:text-emerald-500 shadow-none ring-0 focus:ring-0"
+                          onClick={() => { setSelectedStaff(s); setIsViewOpen(true); }}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-8 h-8 sm:w-9 sm:h-9 bg-transparent hover:bg-transparent text-blue-500 hover:text-blue-500 shadow-none ring-0 focus:ring-0"
+                          onClick={() => { setSelectedStaff(s); setIsEditOpen(true); }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-8 h-8 sm:w-9 sm:h-9 bg-transparent hover:bg-transparent text-destructive hover:text-destructive shadow-none ring-0 focus:ring-0"
+                          onClick={() => { setSelectedStaff(s); setIsDeleteOpen(true); }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground font-medium">
+                    {search || filterDept !== 'All' || filterStatus !== 'All' 
+                      ? 'No staff members match your search criteria.' 
+                      : 'No staff members found in the system.'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
 
         {totalPages > 1 && (
@@ -255,3 +277,4 @@ export default function ManageStaff() {
     </div>
   );
 }
+

@@ -21,14 +21,21 @@ import { DeleteEquipment } from './delete';
 import { useUsers } from '@/lib/UserContext';
 
 export default function ManageEquipment() {
-  const { equipment, addEquipment, updateEquipment, deleteEquipment } = useEquipment();
+  const { 
+    equipment, 
+    staffRequests,
+    isLoading, 
+    error, 
+    addEquipment, 
+    updateEquipment, 
+    deleteEquipment, 
+    refreshEquipment,
+    updateStaffRequestStatus
+  } = useEquipment();
   const { users } = useUsers();
   
   const staff = users.filter(u => u.role === 'staff');
   const [search, setSearch] = useState('');
-  const [staffRequests, setStaffRequests] = useState(() =>
-    getStaffEquipmentRequests().filter(r => r.status === 'pending')
-  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [prefillFromRequest, setPrefillFromRequest] = useState<
     | null
@@ -36,22 +43,14 @@ export default function ManageEquipment() {
   >(null);
   const [requestToAutoFulfill, setRequestToAutoFulfill] = useState<StaffEquipmentRequest | null>(null);
 
-  const refreshStaffRequests = useCallback(() => {
-    setStaffRequests(getStaffEquipmentRequests().filter(r => r.status === 'pending'));
-  }, []);
-
-  useEffect(() => {
-    refreshStaffRequests();
-    window.addEventListener('staff-equipment-requests-changed', refreshStaffRequests);
-    return () => window.removeEventListener('staff-equipment-requests-changed', refreshStaffRequests);
-  }, [refreshStaffRequests]);
+  const pendingRequests = staffRequests.filter(r => r.status === 'pending');
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
-  // Sort by ID descending (newest first) so added items appear at the top
-  const sorted = [...equipment].sort((a, b) => b.id.localeCompare(a.id));
+  // Sort by name for stability
+  const sorted = [...equipment].sort((a, b) => a.name.localeCompare(b.name));
 
   const filtered = sorted.filter(e => 
     e.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -66,24 +65,34 @@ export default function ManageEquipment() {
     setCurrentPage(1);
   }, [search]);
 
-  const handleAdd = (item: Equipment) => {
-    addEquipment(item);
+  const handleAdd = async (item: Partial<Equipment>) => {
+    try {
+      await addEquipment(item);
+      toast.success('Equipment added successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add equipment');
+    }
   };
 
-  const handleUpdate = (updated: Equipment) => {
-    updateEquipment(updated);
+  const handleUpdate = async (id: string, updated: Partial<Equipment>) => {
+    try {
+      await updateEquipment(id, updated);
+      toast.success('Equipment updated successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update equipment');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteEquipment(id);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteEquipment(id);
+      toast.success('Equipment removed from inventory');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete equipment');
+    }
   };
 
   const getStaffName = (id?: string) => staff.find(s => s.id === id)?.name || '—';
-
-  const totalSkus = equipment.length;
-  const totalUnits = equipment.reduce((sum, e) => sum + e.totalQuantity, 0);
-  const totalAvailable = equipment.reduce((sum, e) => sum + e.available, 0);
-  const totalInUse = equipment.reduce((sum, e) => sum + e.inUse, 0);
 
   const openAddFromRequest = (req: StaffEquipmentRequest) => {
     setRequestToAutoFulfill(req);
@@ -95,10 +104,40 @@ export default function ManageEquipment() {
     setAddDialogOpen(true);
   };
 
-  const declineStaffRequest = (id: string) => {
-    updateStaffEquipmentRequestStatus(id, 'dismissed');
-    toast.success('Declined — staff will no longer see this as pending');
+  const declineStaffRequest = async (id: string) => {
+    try {
+      await updateStaffRequestStatus(id, 'dismissed');
+      toast.success('Declined — staff will no longer see this as pending');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Activity className="w-10 h-10 text-primary animate-pulse" />
+        <p className="text-muted-foreground font-medium animate-pulse">Loading inventory data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-8 text-center space-y-4">
+        <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mx-auto text-destructive">
+          <Activity className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-lg font-bold text-destructive">Inventory Sync Error</h3>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
+        <Button onClick={() => refreshEquipment()} variant="outline" className="border-destructive/30 hover:bg-destructive/10">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -118,10 +157,14 @@ export default function ManageEquipment() {
               }
             }}
             prefill={prefillFromRequest ?? undefined}
-            onAdded={() => {
+            onAdded={async () => {
               if (!requestToAutoFulfill) return;
-              updateStaffEquipmentRequestStatus(requestToAutoFulfill.id, 'fulfilled');
-              toast.success('Done — request fulfilled and staff updated');
+              try {
+                await updateStaffRequestStatus(requestToAutoFulfill.id, 'fulfilled');
+                toast.success('Done — request fulfilled and staff updated');
+              } catch (err: any) {
+                toast.error(err.message);
+              }
             }}
           />
         }
@@ -133,15 +176,15 @@ export default function ManageEquipment() {
           <div className="flex items-center gap-2">
             <Inbox className="w-4 h-4 text-muted-foreground shrink-0" />
             <h3 className="text-sm font-semibold text-foreground">Staff equipment requests</h3>
-            {staffRequests.length > 0 && (
-              <span className="text-xs font-medium text-primary">{staffRequests.length} pending</span>
+            {pendingRequests.length > 0 && (
+              <span className="text-xs font-medium text-primary">{pendingRequests.length} pending</span>
             )}
           </div>
           <p className="text-xs text-muted-foreground pl-6">
             Flow: Staff → My Equipment → Send request → you review here → <span className="font-medium text-foreground">Done</span> after stocking / assigning, or <span className="font-medium text-foreground">Decline</span> if you can’t fulfill.
           </p>
         </div>
-        {staffRequests.length === 0 ? (
+        {pendingRequests.length === 0 ? (
           <div className="py-10 px-5 text-center text-sm text-muted-foreground">
             No pending requests. When staff submit a request, it will show up in this table.
           </div>
@@ -151,13 +194,13 @@ export default function ManageEquipment() {
               <TableRow>
                 <TableHead>Staff</TableHead>
                 <TableHead>Equipment</TableHead>
-                <TableHead className="text-center w-24">Qty</TableHead>
-                <TableHead className="hidden md:table-cell w-44">Received</TableHead>
-                <TableHead className="text-right min-w-[200px]">Actions</TableHead>
+                <TableHead className="text-center w-20">Qty</TableHead>
+                <TableHead className="hidden lg:table-cell w-44">Received</TableHead>
+                <TableHead className="text-right px-4 sm:px-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {staffRequests.map(r => (
+              {pendingRequests.map(r => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.staffName}</TableCell>
                   <TableCell>{r.equipmentName}</TableCell>
@@ -165,12 +208,12 @@ export default function ManageEquipment() {
                   <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                     {new Date(r.createdAt).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button size="sm" onClick={() => openAddFromRequest(r)}>
+                  <TableCell className="text-right px-4 sm:px-6">
+                    <div className="flex flex-wrap justify-end gap-1.5 sm:gap-2">
+                      <Button size="sm" onClick={() => openAddFromRequest(r)} className="h-8 px-3 text-xs">
                         Done
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => declineStaffRequest(r.id)}>
+                      <Button variant="outline" size="sm" onClick={() => declineStaffRequest(r.id)} className="h-8 px-3 text-xs">
                         Decline
                       </Button>
                     </div>
@@ -198,25 +241,25 @@ export default function ManageEquipment() {
           <TableHeader>
             <TableRow>
               <TableHead>Equipment</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead className="hidden sm:table-cell">Category</TableHead>
               <TableHead className="text-center">Total</TableHead>
               <TableHead className="text-center">Available</TableHead>
-              <TableHead className="text-center hidden sm:table-cell">In Use</TableHead>
-              <TableHead className="hidden md:table-cell">Assigned Staff</TableHead>
-              <TableHead className="text-right px-6">Actions</TableHead>
+              <TableHead className="text-center hidden md:table-cell">In Use</TableHead>
+              <TableHead className="hidden lg:table-cell">Assigned Staff</TableHead>
+              <TableHead className="text-right px-4 sm:px-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedEquipment.map(e => (
               <TableRow key={e.id} className="group hover:bg-muted/30 transition-colors">
-                <TableCell className="font-medium">{e.name}</TableCell>
-                <TableCell className="text-muted-foreground">{e.category}</TableCell>
+                <TableCell className="font-medium text-sm">{e.name}</TableCell>
+                <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">{e.category}</TableCell>
                 <TableCell className="text-center font-semibold">{e.totalQuantity}</TableCell>
                 <TableCell className="text-center font-bold text-success">{e.available}</TableCell>
-                <TableCell className="text-center hidden sm:table-cell text-info font-medium">{e.inUse}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">{getStaffName(e.assignedStaffId)}</TableCell>
-                <TableCell className="text-right px-6">
-                  <div className="flex items-center justify-end gap-2">
+                <TableCell className="text-center hidden md:table-cell text-info font-medium">{e.inUse}</TableCell>
+                <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{getStaffName(e.assignedStaffId)}</TableCell>
+                <TableCell className="text-right px-4 sm:px-6">
+                  <div className="flex items-center justify-end gap-1 sm:gap-2">
                     <EditEquipment equipment={e} onUpdate={handleUpdate} staff={staff} />
                     <DeleteEquipment equipment={e} onDelete={handleDelete} />
                   </div>

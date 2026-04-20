@@ -1,42 +1,44 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import api from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  UserCircle2, 
-  Building2, 
-  GraduationCap, 
-  Mail, 
-  Lock, 
-  ArrowRight, 
-  Loader2, 
-  Smartphone,
+import {
+  Building2,
+  GraduationCap,
+  Mail,
+  Lock,
+  ArrowRight,
+  Loader2,
   ShieldCheck,
   User,
   KeyRound,
   ArrowLeft,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserRole } from '@/types';
 
 export default function LoginPage() {
-  const { login, isLoading, error } = useAuth();
+  const { login, logout, isLoading, error } = useAuth();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<UserRole>('student');
+  const [searchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') || 'student') as UserRole;
+  const [activeTab, setActiveTab] = useState<UserRole>(initialTab);
   const [view, setView] = useState<'login' | 'forgot-password'>('login');
-  
+
   // Login states
   const [identifier, setIdentifier] = useState(''); // Email or User ID
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Forgot password states
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStep, setForgotStep] = useState<'email' | 'otp'>('email');
@@ -45,8 +47,8 @@ export default function LoginPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Clear states when tab changes
@@ -55,40 +57,61 @@ export default function LoginPage() {
     setPassword('');
     setView('login');
     setForgotStep('email');
+    setOtp(['', '', '', '', '', '']);
   }, [activeTab]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const loginEmail = identifier;
-    const success = await login(loginEmail, password);
-    if (success) {
+    // Pass activeTab as expectedRole — AuthContext will reject before loader if roles don't match
+    const result = await login(identifier, password, activeTab);
+    if (result.success) {
       toast.success('Welcome back!');
       navigate(`/${activeTab}`);
     }
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSendingOtp(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSendingOtp(false);
-    setForgotStep('otp');
-    toast.success('OTP sent! Use 123456 for demo.');
+    if (!forgotEmail) return toast.error('Please enter your email');
+
+    setIsSendingReset(true);
+    try {
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setForgotStep('otp');
+      toast.success('Code sent!', {
+        description: `6-digit verification code sent to ${forgotEmail}.`,
+      });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to send verification code');
+    } finally {
+      setIsSendingReset(false);
+    }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
+    const otpCode = otp.join('');
+    if (otpCode.length !== 6) return toast.error('Please enter the complete 6-digit code');
+    if (newPassword !== confirmPassword) return toast.error('Passwords do not match');
+    if (newPassword.length < 6) return toast.error('Password must be at least 6 characters');
+
+    setIsSendingReset(true);
+    try {
+      await api.post('/auth/reset-password', {
+        email: forgotEmail,
+        otp: otpCode,
+        newPassword
+      });
+      toast.success('Password updated!', {
+        description: 'You can now log in with your new password.',
+      });
+      setView('login');
+      setForgotStep('email');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setIsSendingReset(false);
     }
-    if (otp.join('') !== '123456') {
-      toast.error('Invalid OTP');
-      return;
-    }
-    toast.success('Password reset successful! You can now log in.');
-    setView('login');
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -126,7 +149,7 @@ export default function LoginPage() {
         </div>
 
         {view === 'login' ? (
-          <Tabs defaultValue="student" onValueChange={(v) => setActiveTab(v as UserRole)} className="w-full">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as UserRole)} className="w-full">
             <TabsList className="grid w-full grid-cols-3 h-14 p-1 bg-secondary shadow-inner rounded-xl mb-6">
               <TabsTrigger value="admin" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
                 <ShieldCheck className="w-4 h-4 mr-2" /> Admin
@@ -176,8 +199,8 @@ export default function LoginPage() {
                       <div className="flex justify-between items-center">
                         <Label htmlFor="password">Password</Label>
                         {activeTab !== 'admin' && (
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => setView('forgot-password')}
                             className="text-xs text-primary hover:underline font-medium"
                           >
@@ -212,29 +235,27 @@ export default function LoginPage() {
                       {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowRight className="w-4 h-4 mr-2" />}
                       {isLoading ? 'Processing...' : 'Secure Log In'}
                     </Button>
-                    <div className="text-center text-xs text-muted-foreground">
-                      Demo: {activeTab === 'admin' ? 'admin / admin123' : activeTab === 'staff' ? 'priya@gmail.com / sports@123' : 'arjun@gmail.com / sports@123'}
-                    </div>
                   </CardFooter>
                 </form>
               </Card>
             </TabsContent>
           </Tabs>
         ) : (
-          <Card className="border-border/50 shadow-elevated bg-card/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
-            <CardHeader>
-              <button 
+          <Card className="border-border/50 shadow-elevated bg-card/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
+            <CardHeader className="pb-4">
+              <button
                 onClick={() => setView('login')}
-                className="flex items-center text-xs text-muted-foreground hover:text-primary transition-colors mb-4"
+                className="flex items-center text-xs text-muted-foreground hover:text-primary transition-colors mb-4 group w-fit"
               >
-                <ArrowLeft className="w-3 h-3 mr-1" /> Back to login
+                <ArrowLeft className="w-3 h-3 mr-1 transition-transform group-hover:-translate-x-1" /> Back to login
               </button>
               <CardTitle className="text-xl">Reset Password</CardTitle>
               <CardDescription>
-                {forgotStep === 'email' ? "Enter your registered email to receive a recovery OTP." : "Verify your identity and set a new password."}
+                {forgotStep === 'email' ? "We'll send a 6-digit code to your university email." : "Enter the code and choose your new password."}
               </CardDescription>
             </CardHeader>
-            <form onSubmit={forgotStep === 'email' ? handleSendOtp : handleResetPassword}>
+
+            <form onSubmit={forgotStep === 'email' ? handleForgotPassword : handleResetPassword}>
               <CardContent className="space-y-4">
                 {forgotStep === 'email' ? (
                   <div className="space-y-2">
@@ -243,18 +264,19 @@ export default function LoginPage() {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         id="forgot-email"
-                        placeholder="email@example.com"
+                        type="email"
+                        placeholder="e.g. arjun@student.edu"
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
-                        className="pl-10 h-12"
+                        className="pl-10 h-12 bg-card/50"
                         required
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="space-y-2">
-                      <Label className="text-center block text-sm font-semibold">Enter 6-digit OTP</Label>
+                      <Label className="text-center block text-sm font-semibold">6-Digit Verification Code</Label>
                       <div className="flex gap-2 justify-center">
                         {otp.map((digit, i) => (
                           <input
@@ -267,21 +289,24 @@ export default function LoginPage() {
                             onChange={e => handleOtpChange(i, e.target.value)}
                             onKeyDown={e => handleOtpKeyDown(i, e)}
                             className="w-10 h-12 text-center text-lg font-bold border border-input rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all shadow-sm"
+                            required
                           />
                         ))}
                       </div>
                     </div>
+
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="new-password">New Password</Label>
                         <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             id="new-password"
                             type={showNewPassword ? "text" : "password"}
-                            placeholder="••••••••"
+                            placeholder="Min 6 characters"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            className="pr-10 h-12"
+                            className="pl-10 pr-10 h-12"
                             required
                           />
                           <button
@@ -293,16 +318,18 @@ export default function LoginPage() {
                           </button>
                         </div>
                       </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="confirm-password">Confirm Password</Label>
                         <div className="relative">
+                          <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             id="confirm-password"
                             type={showConfirmPassword ? "text" : "password"}
-                            placeholder="••••••••"
+                            placeholder="Re-enter password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="pr-10 h-12"
+                            className="pl-10 pr-10 h-12"
                             required
                           />
                           <button
@@ -318,10 +345,10 @@ export default function LoginPage() {
                   </div>
                 )}
               </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full h-12 gradient-primary text-primary-foreground shadow-lg" disabled={isSendingOtp}>
-                  {isSendingOtp ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Smartphone className="w-4 h-4 mr-2" />}
-                  {forgotStep === 'email' ? (isSendingOtp ? 'Sending...' : 'Send OTP Code') : 'Reset & Log In'}
+              <CardFooter className="pb-6">
+                <Button type="submit" className="w-full h-12 gradient-primary text-primary-foreground shadow-lg" disabled={isSendingReset}>
+                  {isSendingReset ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (forgotStep === 'email' ? <Mail className="w-4 h-4 mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />)}
+                  {isSendingReset ? (forgotStep === 'email' ? 'Sending Code...' : 'Updating...') : (forgotStep === 'email' ? 'Send Verification Code' : 'Reset Password & Login')}
                 </Button>
               </CardFooter>
             </form>

@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   ArrowUpRight,
   GraduationCap,
   Briefcase,
   Dumbbell,
+  Activity,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { useUsers } from '@/lib/UserContext';
 import { useData } from '@/lib/BookingContext';
 import { useEquipment } from '@/lib/EquipmentContext';
+import { useAuth } from '@/lib/AuthContext';
+import api from '@/lib/api';
 import {
   BarChart,
   Bar,
@@ -26,20 +28,48 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+import { ActivityLog } from '@/types';
 
-
+interface DashboardStats {
+  staffCount: number;
+  studentCount: number;
+  equipmentCount: number;
+  bookingCount: number;
+  totalQuantitySum: number;
+}
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const { users } = useUsers();
-  const { bookings, warnings } = useData();
+  const { bookings } = useData();
   const { equipment } = useEquipment();
+  
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  const staff = users.filter(u => u.role === 'staff');
-  const students = users.filter(u => u.role === 'student');
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        const [statsRes, logsRes] = await Promise.all([
+          api.get('/dashboard/stats'),
+          api.get('/dashboard/logs')
+        ]);
+        setStats(statsRes.data);
+        setLogs(logsRes.data);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    }
+    fetchDashboardData();
+  }, []);
+
   const userStats = [
-    { name: 'Students', value: students.length, fill: '#0ea5e9' },
-    { name: 'Staff', value: staff.length, fill: '#10b981' },
+    { name: 'Students', value: stats?.studentCount ?? users.filter(u => u.role === 'student').length, fill: '#0ea5e9' },
+    { name: 'Staff', value: stats?.staffCount ?? users.filter(u => u.role === 'staff').length, fill: '#10b981' },
   ];
 
   const categoryData = equipment
@@ -80,23 +110,21 @@ export default function AdminDashboard() {
   const firstHalf = bookingTrends.slice(0, 3).reduce((sum, entry) => sum + entry.bookings, 0);
   const secondHalf = bookingTrends.slice(3).reduce((sum, entry) => sum + entry.bookings, 0);
   const weeklyGrowth = firstHalf === 0 ? 0 : Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
-  const recentBookings = bookings
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 4);
 
   return (
-      <div className="space-y-6 sm:space-y-8 animate-fade-in pb-10">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <PageHeader title="Dashboard Overview" description="Welcome back, Dr. Rajesh Kumar. Here's what's happening." />
-
+        <PageHeader 
+          title="Dashboard Overview" 
+          description={`Welcome back, ${user?.name || 'Admin'}. Here's what's happening.`} 
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Active Staff" value={staff.length} icon={Briefcase} trend="Total Count" trendUp color="indigo" />
-        <StatCard title="Total Students" value={students.length} icon={GraduationCap} trend="+12% Usage" trendUp color="amber" />
-        <StatCard title="Inventory" value={equipment.length} icon={Dumbbell} trend="Items" color="emerald" />
-        <StatCard title="Total Bookings" value={bookings.length} icon={Calendar} trend="All Time" color="info" />
+        <StatCard title="Active Staff" value={stats?.staffCount ?? 0} icon={Briefcase} trend="Total Count" trendUp color="indigo" isLoading={isLoadingStats} />
+        <StatCard title="Total Students" value={stats?.studentCount ?? 0} icon={GraduationCap} trend="Enrolled" trendUp color="amber" isLoading={isLoadingStats} />
+        <StatCard title="Inventory" value={stats?.totalQuantitySum ?? 0} icon={Dumbbell} trend={`${stats?.equipmentCount ?? 0} Types`} color="emerald" isLoading={isLoadingStats} />
+        <StatCard title="Total Bookings" value={stats?.bookingCount ?? 0} icon={Calendar} trend="All Time" color="info" isLoading={isLoadingStats} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
@@ -105,11 +133,8 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between gap-3 mb-6">
             <div>
               <h3 className="text-base sm:text-lg font-bold text-foreground">Equipment Utilization</h3>
-              <p className="text-sm text-muted-foreground">Category-wise usage statistics</p>
+              <p className="text-sm text-muted-foreground">Category-wise usage based on active sessions</p>
             </div>
-            <button className="hidden sm:flex text-xs font-semibold text-primary hover:underline items-center gap-1">
-              View Report <ArrowUpRight className="w-3 h-3" />
-            </button>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -123,30 +148,9 @@ export default function AdminDashboard() {
                    ))}
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis 
-                  type="number"
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                />
-                <YAxis 
-                  dataKey="name"
-                  type="category"
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 'bold' }}
-                  width={80}
-                />
-                <Tooltip 
-                  cursor={{ fill: 'hsl(var(--primary))', opacity: 0.1 }}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
-                  }}
-                />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 'bold' }} width={80} />
+                <Tooltip cursor={{ fill: 'hsl(var(--primary))', opacity: 0.1 }} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid hsl(var(--border))', borderRadius: '12px' }} />
                 <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={32}>
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={`url(#barGrad-${index})`} />
@@ -160,7 +164,7 @@ export default function AdminDashboard() {
         {/* Weekly Trend */}
         <div className="bg-card rounded-2xl border border-border p-6 shadow-card relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 blur-3xl rounded-full group-hover:bg-primary/20 transition-all duration-700" />
-          <h3 className="text-lg font-bold text-foreground mb-6">Weekly Trends</h3>
+          <h3 className="text-lg font-bold text-foreground mb-6">Booking Trends</h3>
           <div className="h-[200px] w-full mb-6">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={bookingTrends}>
@@ -171,24 +175,8 @@ export default function AdminDashboard() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" hide />
-                <Tooltip
-                  labelClassName="font-bold text-foreground"
-                  contentStyle={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '12px',
-                    border: '1px solid hsl(var(--border))'
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="bookings"
-                  stroke="#0ea5e9"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#colorBookings)"
-                  animationDuration={1500}
-                />
+                <Tooltip labelClassName="font-bold text-foreground" contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid hsl(var(--border))' }} />
+                <Area type="monotone" dataKey="bookings" stroke="#0ea5e9" strokeWidth={4} fillOpacity={1} fill="url(#colorBookings)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -206,82 +194,60 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Bookings */}
+        {/* Activity Feed */}
         <div className="bg-card rounded-2xl border border-border shadow-card overflow-hidden">
-          <div className="p-6 border-b border-border flex items-center justify-between">
-            <h3 className="font-bold text-foreground">Recent Activity</h3>
-            <button className="text-xs font-semibold text-primary hover:underline">View All</button>
+          <div className="p-6 border-b border-border flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            <h3 className="font-bold text-foreground">System Activities</h3>
           </div>
-          <div className="divide-y divide-border">
-            {recentBookings.map(b => (
-              <div key={b.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-secondary/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs text-left">
-                    {b.studentName.charAt(0)}
+          <div className="divide-y divide-border overflow-y-auto max-h-[400px]">
+            {logs.length === 0 && !isLoadingStats && <p className="p-10 text-center text-sm text-muted-foreground italic">No recent activities found.</p>}
+            {logs.map((log) => (
+              <div key={log.id} className="p-4 hover:bg-secondary/30 transition-colors">
+                <div className="flex gap-3 text-left">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px] shrink-0">
+                    {(log.userName || "U").charAt(0)}
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-bold text-foreground">{b.studentName}</p>
-                    <p className="text-xs text-muted-foreground">{b.equipmentName} · {b.timeSlot}</p>
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-sm font-bold text-foreground">{log.userName || "Unknown User"}</p>
+                      <p className="text-[10px] font-medium text-primary uppercase tracking-tight">{log.action}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{log.details}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                      {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
+                    </p>
                   </div>
                 </div>
-                <div className="sm:ml-4"><StatusBadge status={b.status} /></div>
               </div>
             ))}
           </div>
         </div>
 
         {/* User Distribution */}
-        <div className="bg-card rounded-2xl border border-border p-6 shadow-card flex flex-col items-center">
+        <div className="bg-card rounded-2xl border border-border p-6 shadow-card flex flex-col items-center justify-center">
           <h3 className="font-bold text-foreground mb-6 text-center">User Management</h3>
           <div className="h-[250px] w-full relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={userStats}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={90}
-                  paddingAngle={8}
-                  dataKey="value"
-                  stroke="none"
-                >
+                <Pie data={userStats} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
                   {userStats.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.fill}
-                      className="hover:opacity-80 transition-opacity cursor-pointer"
-                    />
+                    <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity cursor-pointer" />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    borderRadius: '12px',
-                    border: '1px solid hsl(var(--border))',
-                    boxShadow: 'var(--shadow-md)'
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }} />
               </PieChart>
             </ResponsiveContainer>
-
-            {/* Center Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-3">
-              <span className="text-3xl font-black text-foreground">
-                {userStats.reduce((acc, curr) => acc + curr.value, 0)}
-              </span>
+              <span className="text-3xl font-black text-foreground">{userStats.reduce((acc, curr) => acc + curr.value, 0)}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Total Users</span>
             </div>
           </div>
-
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4 px-4">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4 px-4 text-center">
             {userStats.map(stat => (
               <div key={stat.name} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full shadow-sm"
-                  style={{ backgroundColor: stat.fill }}
-                />
-                <div className="flex flex-col">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: stat.fill }} />
+                <div className="flex flex-col items-start">
                   <span className="text-xs font-bold text-foreground">{stat.name}</span>
                   <span className="text-[10px] text-muted-foreground">{stat.value} Members</span>
                 </div>
@@ -290,10 +256,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-
-
-
-
     </div>
   );
 }

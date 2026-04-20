@@ -10,12 +10,13 @@ import { toast } from 'sonner';
 
 interface EditEquipmentProps {
   equipment: Equipment;
-  onUpdate: (updated: Equipment) => void;
+  onUpdate: (id: string, updated: Partial<Equipment>) => Promise<void>;
   staff: User[];
 }
 
 export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: equipment.name,
     category: equipment.category,
@@ -37,7 +38,7 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
     });
   }, [equipment, open]);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!form.name || !form.category || !form.totalQuantity) {
       return toast.error('Required fields missing');
     }
@@ -52,28 +53,37 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
       });
     }
 
-    onUpdate({
-      ...equipment,
-      name: form.name,
-      category: form.category,
-      totalQuantity: total,
-      available: avail,
-      inUse: use,
-      assignedStaffId: form.assignedStaffId,
-    });
+    setIsSubmitting(true);
+    try {
+      await onUpdate(equipment.id, {
+        name: form.name,
+        category: form.category,
+        totalQuantity: total,
+        available: avail,
+        inUse: use,
+        assignedStaffId: form.assignedStaffId || undefined,
+      });
 
-    setOpen(false);
-    toast.success('Equipment updated');
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update equipment');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="hover:text-primary transition-colors">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="bg-transparent hover:bg-transparent text-blue-500 hover:text-blue-500 shadow-none ring-0 focus:ring-0"
+        >
           <Edit className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg bg-card border-border shadow-elevated">
+      <DialogContent className="w-[95vw] sm:max-w-lg bg-card border-border shadow-elevated">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">Edit Equipment</DialogTitle>
         </DialogHeader>
@@ -145,9 +155,11 @@ export function EditEquipment({ equipment, onUpdate, staff }: EditEquipmentProps
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleUpdate} className="gradient-primary text-white font-bold px-6">Save Changes</Button>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting} className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive text-muted-foreground transition-colors w-full sm:w-auto">Cancel</Button>
+          <Button onClick={handleUpdate} disabled={isSubmitting} className="gradient-primary text-white font-bold px-6 min-w-full sm:min-w-[140px]">
+            {isSubmitting ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</span> : 'Save Changes'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

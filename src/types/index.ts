@@ -10,6 +10,7 @@ export interface User {
   department?: string;
   createdAt: string;
   isActive: boolean;
+  sendEmail?: boolean;
 }
 
 export interface Equipment {

@@ -1,18 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types';
-import { Trash2, AlertCircle } from 'lucide-react';
+import { Trash2, AlertCircle, Loader2 } from 'lucide-react';
 
 interface DeleteStaffProps {
   staff: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (id: string) => void;
+  onConfirm: (id: string) => Promise<void>;
 }
 
 export function DeleteStaff({ staff, open, onOpenChange, onConfirm }: DeleteStaffProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
   if (!staff) return null;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onConfirm(staff.id);
+      onOpenChange(false);
+    } catch (error) {
+      // Error handled by UserContext
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -36,19 +50,19 @@ export function DeleteStaff({ staff, open, onOpenChange, onConfirm }: DeleteStaf
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isDeleting} className="flex-1">Cancel</Button>
           <Button 
             variant="destructive" 
-            onClick={() => {
-              onConfirm(staff.id);
-              onOpenChange(false);
-            }} 
+            onClick={handleDelete}
+            disabled={isDeleting}
             className="flex-1 font-bold"
           >
-            Delete Staff
+            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {isDeleting ? 'Deleting...' : 'Delete Staff'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

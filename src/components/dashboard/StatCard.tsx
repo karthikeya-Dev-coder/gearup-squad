@@ -10,9 +10,10 @@ interface StatCardProps {
   trendUp?: boolean;
   className?: string;
   color?: 'primary' | 'indigo' | 'emerald' | 'amber' | 'rose' | 'info';
+  isLoading?: boolean;
 }
 
-export function StatCard({ title, value, icon: Icon, trend, trendUp, className, color = 'primary' }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, trend, trendUp, className, color = 'primary', isLoading }: StatCardProps) {
   const themes = {
     primary: {
       gradient: 'bg-gradient-to-br from-[#10b981] to-[#059669]',
@@ -79,8 +80,12 @@ export function StatCard({ title, value, icon: Icon, trend, trendUp, className, 
       <div className="relative z-10 text-white">
         <p className="text-xs sm:text-sm font-medium opacity-80 mb-1 break-words">{title}</p>
         <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl sm:text-4xl font-black tracking-tight break-words">{value}</h3>
-            {trendUp !== undefined && (
+            {isLoading ? (
+              <div className="h-10 w-24 bg-white/20 animate-pulse rounded-lg" />
+            ) : (
+              <h3 className="text-3xl sm:text-4xl font-black tracking-tight break-words">{value}</h3>
+            )}
+            {trendUp !== undefined && !isLoading && (
                 <div className={cn(
                     "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
                     theme.iconBg

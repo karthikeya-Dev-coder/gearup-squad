@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, Package, Calendar, AlertTriangle,
-  LogOut, X, Activity, ClipboardList
+  LogOut, X, Activity, ClipboardList, GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -22,7 +22,7 @@ interface NavItem {
 const adminNav: NavItem[] = [
   { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
   { label: 'Staff', path: '/admin/staff', icon: Users },
-  { label: 'Students', path: '/admin/students', icon: Users },
+  { label: 'Students', path: '/admin/students', icon: GraduationCap },
   { label: 'Equipment', path: '/admin/equipment', icon: Package },
   { label: 'Bookings', path: '/admin/bookings', icon: Calendar },
   { label: 'Penalties', path: '/admin/penalties', icon: AlertTriangle },
@@ -30,7 +30,7 @@ const adminNav: NavItem[] = [
 
 const staffNav: NavItem[] = [
   { label: 'Dashboard', path: '/staff', icon: LayoutDashboard },
-  { label: 'Equipment', path: '/staff/equipment', icon: Package },
+  { label: 'Equipment', path: '/staff/inventory', icon: Package },
   { label: 'Bookings', path: '/staff/bookings', icon: Calendar },
   { label: 'Penalties', path: '/staff/penalties', icon: AlertTriangle },
   { label: 'Activity Log', path: '/staff/activity', icon: Activity },
@@ -38,10 +38,9 @@ const staffNav: NavItem[] = [
 
 const studentNav: NavItem[] = [
   { label: 'Dashboard', path: '/student', icon: LayoutDashboard },
-  { label: 'Equipment', path: '/student/equipment', icon: Package },
+  { label: 'Equipment', path: '/student/inventory', icon: Package },
   { label: 'My Bookings', path: '/student/bookings', icon: ClipboardList },
   { label: 'Penalties', path: '/student/penalties', icon: AlertTriangle },
-  { label: 'Activity Log', path: '/student/activity', icon: Activity },
 ];
 
 interface SidebarProps {

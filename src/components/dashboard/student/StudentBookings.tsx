@@ -7,6 +7,7 @@ import { Package, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useData } from '@/lib/BookingContext';
 import { BookingTimer } from '@/components/dashboard/shared/BookingTimer';
+import { Button } from '@/components/ui/button';
 
 const calculateDueAmount = (booking: Booking) => {
   if (booking.status !== 'overdue') return 0;
@@ -28,7 +29,7 @@ const calculateDueAmount = (booking: Booking) => {
 
 export default function StudentBookings() {
   const { user } = useAuth();
-  const { bookings, isStudentSuspended } = useData();
+  const { bookings, isLoading, error, isStudentSuspended, refreshData } = useData();
 
   const myBookings = bookings.filter(b => b.studentId === user?.id);
   const isSuspended = user ? isStudentSuspended(user.id) : false;
@@ -52,6 +53,22 @@ export default function StudentBookings() {
         </div>
       )}
 
+      {error ? (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center">
+          <p className="text-destructive font-bold mb-2">System Error</p>
+          <p className="text-sm text-destructive/80 mb-4">{error}</p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => refreshData()} className="font-bold border-destructive/50 text-destructive hover:bg-destructive/20">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      ) : isLoading ? (
+        <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-muted-foreground font-bold animate-pulse">Loading Your Bookings...</p>
+        </div>
+      ) : (
       <div className="bg-card rounded-2xl border border-border shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
@@ -104,6 +121,7 @@ export default function StudentBookings() {
           </Table>
         </div>
       </div>
+      )}
     </div>
   );
 }

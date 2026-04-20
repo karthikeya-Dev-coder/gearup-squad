@@ -19,13 +19,13 @@ export function ViewStaff({ staff, open, onOpenChange }: ViewStaffProps) {
       <DialogContent className="sm:max-w-md bg-card border-border shadow-elevated">
         <DialogHeader>
           <DialogTitle className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-             <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm">
-                {staff.name.charAt(0)}
-             </div>
-             Staff Profile
+            <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm">
+              {staff.name.charAt(0)}
+            </div>
+            Staff Profile
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 pt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">

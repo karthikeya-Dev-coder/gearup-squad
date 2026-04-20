@@ -1,52 +1,69 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Trash2, UserX } from 'lucide-react';
 import { User } from '@/types';
-import { toast } from 'sonner';
+import { Trash2, AlertCircle, Loader2 } from 'lucide-react';
 
 interface DeleteStudentProps {
   student: User;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
 export function DeleteStudent({ student, onDelete }: DeleteStudentProps) {
   const [open, setOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = () => {
-    onDelete(student.id);
-    setOpen(false);
-    toast.error(`Student record deleted`, {
-        description: `${student.name} has been removed from the system.`,
-        icon: <UserX className="w-4 h-4 text-destructive" />
-    });
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(student.id);
+      setOpen(false);
+    } catch (error) {
+      // Error handled by context
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="hover:text-destructive transition-colors">
-          <Trash2 className="w-4 h-4 text-destructive" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[400px] bg-card border-border shadow-elevated">
-        <div className="flex flex-col items-center justify-center pt-6 pb-2 text-center">
-            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-                <Trash2 className="w-8 h-8 text-destructive animate-pulse" />
-            </div>
-            <DialogTitle className="text-xl font-bold">Delete Student Record?</DialogTitle>
-            <DialogDescription className="mt-2 text-muted-foreground">
-                This will permanently delete the account for <span className="font-bold text-foreground">{student.name}</span>. 
-                All booking history and profile data will be lost.
-            </DialogDescription>
-        </div>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="bg-transparent hover:bg-transparent text-destructive hover:text-destructive shadow-none ring-0 focus:ring-0"
+        onClick={() => setOpen(true)}
+      >
+        <Trash2 className="w-4 h-4" />
+      </Button>
+      <DialogContent className="sm:max-w-md bg-card border-border shadow-elevated">
+        <DialogHeader className="flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <Trash2 className="w-8 h-8 text-destructive" />
+          </div>
+          <DialogTitle className="text-xl font-bold">Remove Student</DialogTitle>
+          <DialogDescription className="pt-2">
+            Are you sure you want to remove <span className="font-bold text-foreground">{student.name}</span>? 
+            This will permanently delete their record and all booking history.
+          </DialogDescription>
+        </DialogHeader>
         
-        <DialogFooter className="flex sm:flex-row gap-3 mt-4">
-          <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">
-            Keep Record
-          </Button>
-          <Button variant="destructive" onClick={handleDelete} className="flex-1 font-bold">
-            Delete Profile
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-start gap-3 mt-2">
+          <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-xs text-destructive font-medium leading-relaxed">
+            Warning: This action is irreversible. All data associated with this student will be lost.
+          </p>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isDeleting} className="flex-1">Cancel</Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="flex-1 font-bold"
+          >
+            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {isDeleting ? 'Deleting...' : 'Remove Student'}
           </Button>
         </DialogFooter>
       </DialogContent>

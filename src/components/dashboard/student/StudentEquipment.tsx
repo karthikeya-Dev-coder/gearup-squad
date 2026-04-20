@@ -9,14 +9,7 @@ import { useData } from '@/lib/BookingContext';
 import { Search, Package, AlertCircle, Calendar, Clock, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-
-const timeSlots = [
-  '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
-  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00',
-  '16:00 - 17:00', '17:00 - 18:00',
-];
 
 export default function StudentEquipment() {
   const { user } = useAuth();
@@ -27,14 +20,16 @@ export default function StudentEquipment() {
   const [selectedEq, setSelectedEq] = useState<Equipment | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [date, setDate] = useState('');
-  const [timeSlot, setTimeSlot] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [formError, setFormError] = useState('');
 
   // The 3-strike suspension rule
   const isSuspended = user ? isStudentSuspended(user.id) : false;
 
-  const filtered = equipment.filter(e => 
-    e.name.toLowerCase().includes(search.toLowerCase()) || 
+  const filtered = equipment.filter(e =>
+    e.name.toLowerCase().includes(search.toLowerCase()) ||
     e.category.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -43,44 +38,62 @@ export default function StudentEquipment() {
     setIsDialogOpen(true);
     // Reset form
     setDate('');
-    setTimeSlot('');
+    setStartTime('');
+    setEndTime('');
     setQuantity(1);
+    setFormError('');
   };
 
   const handleCreateBooking = () => {
-    if (!selectedEq || !date || !timeSlot || !quantity) {
-      return toast.error('Please fill in all fields');
+    setFormError('');
+    if (!selectedEq || !date || !startTime || !endTime || !quantity) {
+      return setFormError('Please fill in all fields');
+    }
+
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const difference = endMinutes - startMinutes;
+
+    if (difference <= 0) {
+      return setFormError('End time must be after start time');
+    }
+
+    if (difference > 120) {
+      return setFormError('Maximum booking duration is 2 hours');
     }
 
     if (selectedEq.available < quantity) {
-      return toast.error('Requested quantity not available');
+      return setFormError('Requested quantity not available');
     }
 
     if (user) {
-      // 1. Create the booking
-      addBooking({
-        id: `bk-${Date.now()}-${selectedEq.id}`,
-        studentId: user.id,
-        studentName: user.name,
-        equipmentId: selectedEq.id,
-        equipmentName: selectedEq.name,
-        date,
-        timeSlot,
-        quantity,
-        status: 'approved',
-        createdAt: new Date().toISOString()
-      });
+      const computedTimeSlot = `${startTime} - ${endTime}`;
 
-      // 2. Update equipment stock (available decreases, inUse increases)
-      updateEquipment({
-        ...selectedEq,
-        available: selectedEq.available - quantity,
-        inUse: selectedEq.inUse + quantity
-      });
+      // Create the booking - backend handles stock deduction automatically
+      const performBooking = async () => {
+        try {
+          await addBooking({
+            studentId: user.id,
+            studentName: user.name,
+            equipmentId: selectedEq.id,
+            equipmentName: selectedEq.name,
+            date,
+            timeSlot: computedTimeSlot,
+            quantity,
+            status: 'approved',
+            createdAt: new Date().toISOString()
+          });
+          toast.success(`Successfully booked ${quantity}x ${selectedEq.name}!`);
+          setIsDialogOpen(false);
+          setSelectedEq(null);
+        } catch (err: any) {
+          toast.error(err.message || 'Booking failed');
+        }
+      };
 
-      toast.success(`Successfully booked ${quantity}x ${selectedEq.name}!`);
-      setIsDialogOpen(false);
-      setSelectedEq(null);
+      performBooking();
     }
   };
 
@@ -122,10 +135,10 @@ export default function StudentEquipment() {
                 </span>
               </div>
             </div>
-            
+
             <h3 className="font-bold text-lg text-foreground truncate">{eq.name}</h3>
 
-            
+
             <div className="flex items-center gap-4 mt-4 py-3 border-y border-border/50">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-muted-foreground/60">Available</span>
@@ -136,9 +149,9 @@ export default function StudentEquipment() {
                 <span className="text-sm font-black text-foreground">{eq.category}</span>
               </div>
             </div>
-            
+
             <div className="mt-4 pt-2">
-              <Button 
+              <Button
                 onClick={() => handleOpenBooking(eq)}
                 disabled={isSuspended || eq.available === 0}
                 className="w-full gradient-primary text-primary-foreground font-bold shadow-lg shadow-primary/20"
@@ -155,52 +168,90 @@ export default function StudentEquipment() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-black gradient-text">Book {selectedEq?.name}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 pb-32">
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-sm font-bold">
                 <Calendar className="w-4 h-4 text-primary" /> Date
               </Label>
-              <Input 
-                type="date" 
-                value={date} 
-                onChange={e => setDate(e.target.value)}
+              <Input
+                type="date"
+                value={date}
+                onChange={e => { setDate(e.target.value); setFormError(''); }}
                 className="rounded-xl border-border bg-muted/50 focus:ring-primary/20"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-bold">
-                <Clock className="w-4 h-4 text-primary" /> Time Slot
-              </Label>
-              <Select value={timeSlot} onValueChange={setTimeSlot}>
-                <SelectTrigger className="rounded-xl border-border bg-muted/50 focus:ring-primary/20">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map(ts => (
-                    <SelectItem key={ts} value={ts}>{ts}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-bold">
+                  <Clock className="w-4 h-4 text-primary" /> Start Time
+                </Label>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={e => { setStartTime(e.target.value); setFormError(''); }}
+                  className="rounded-xl border-border bg-muted/50 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-bold">
+                  <Clock className="w-4 h-4 text-primary" /> End Time
+                </Label>
+                {(() => {
+                  let minTime = '';
+                  let maxTime = '';
+                  if (startTime) {
+                    const [h, m] = startTime.split(':').map(Number);
+
+                    let minH = h, minM = m + 1;
+                    if (minM >= 60) { minM -= 60; minH += 1; }
+                    minTime = `${minH.toString().padStart(2, '0')}:${minM.toString().padStart(2, '0')}`;
+
+                    let maxH = h + 2, maxM = m;
+                    if (maxH >= 24) { maxH = 23; maxM = 59; }
+                    maxTime = `${maxH.toString().padStart(2, '0')}:${maxM.toString().padStart(2, '0')}`;
+                  }
+
+                  return (
+                    <Input
+                      type="time"
+                      value={endTime}
+                      onChange={e => { setEndTime(e.target.value); setFormError(''); }}
+                      min={minTime}
+                      max={maxTime}
+                      disabled={!startTime}
+                      className="rounded-xl border-border bg-muted/50 focus:ring-primary/20"
+                    />
+                  );
+                })()}
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-sm font-bold">
                 <Package className="w-4 h-4 text-primary" /> Quantity (Max: {selectedEq?.available})
               </Label>
-              <Input 
-                type="number" 
-                min={1} 
+              <Input
+                type="number"
+                min={1}
                 max={selectedEq?.available}
-                value={quantity} 
+                value={quantity}
                 onFocus={e => e.target.select()}
-                onChange={e => setQuantity(e.target.valueAsNumber || 0)}
+                onChange={e => { setQuantity(e.target.valueAsNumber || 0); setFormError(''); }}
                 className="rounded-xl border-border bg-muted/50 focus:ring-primary/20"
               />
             </div>
 
-            <Button 
-              onClick={handleCreateBooking} 
+            {formError && (
+              <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive animate-in fade-in slide-in-from-bottom-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <p className="text-sm font-bold">{formError}</p>
+              </div>
+            )}
+
+            <Button
+              onClick={handleCreateBooking}
               className="w-full h-12 rounded-xl gradient-primary text-primary-foreground font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
             >
               Confirm Booking

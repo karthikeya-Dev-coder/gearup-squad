@@ -1,96 +1,91 @@
-import "./app/globals.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/lib/AuthContext";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from '@/components/login/login';
+import { AuthProvider, useAuth } from "@/lib/AuthContext";
+import { UserProvider } from "@/lib/UserContext";
 import { EquipmentProvider } from "@/lib/EquipmentContext";
 import { BookingProvider } from "@/lib/BookingContext";
+import { PageLoader } from "@/components/ui/PageLoader";
+import { ProtectedRoute, RoleRedirect } from "@/components/ProtectedRoute";
+import { DashboardLayout } from '@/components/dashboard/layout';
 
+// Admin Imports
+import AdminDashboard from '@/app/dashboard/admin/AdminDashboard';
+import ManageStaff from '@/components/dashboard/admin/ManageStaff/ManageStaff';
+import ManageStudents from '@/components/dashboard/admin/ManageStudents/ManageStudents';
+import ManageEquipment from '@/components/dashboard/admin/ManageEquipment/ManageEquipment';
+import ManageBookings from '@/components/dashboard/admin/ManageBookings';
+import ManagePenalties from '@/components/dashboard/admin/ManagePenalties';
 
-import LoginPage from "@/app/login/page";
-import Index from "@/app/page";
+// Student Imports
+import StudentDashboard from '@/components/dashboard/student/StudentDashboard';
+import StudentEquipment from '@/components/dashboard/student/StudentEquipment';
+import StudentBookings from '@/components/dashboard/student/StudentBookings';
+import StudentPenalty from '@/components/dashboard/student/StudentWarnings';
 
-import AdminDashboard from "@/app/dashboard/admin/AdminDashboard";
-import ManageStaff from "@/app/dashboard/admin/ManageStaff";
-import ManageStudents from "@/app/dashboard/admin/ManageStudents";
-import ManageEquipment from "@/app/dashboard/admin/ManageEquipment";
-import ManageBookings from "@/app/dashboard/admin/ManageBookings";
-import ManagePenalties from "@/app/dashboard/admin/ManagePenalties";
+// Staff Imports
+import StaffDashboard from '@/components/dashboard/staff/StaffDashboard';
+import StaffEquipment from '@/components/dashboard/staff/StaffEquipment';
+import StaffBookings from '@/components/dashboard/staff/StaffBookings';
+import StaffWarnings from '@/components/dashboard/staff/StaffWarnings';
 
-import StaffDashboard from "@/app/dashboard/staff/StaffDashboard";
-import StaffEquipment from "@/app/dashboard/staff/StaffEquipment";
-import StaffBookings from "@/app/dashboard/staff/StaffBookings";
-import StaffPenalties from "@/app/dashboard/staff/StaffWarnings";
+import ActivityLogPage from '@/components/dashboard/shared/ActivityLogPage';
 
-import StudentDashboard from "@/app/dashboard/student/StudentDashboard";
-import StudentEquipment from "@/app/dashboard/student/StudentEquipment";
-import StudentBookings from "@/app/dashboard/student/StudentBookings";
-import StudentWarnings from "@/app/dashboard/student/StudentWarnings";
+const AppContent = () => {
+  const { isTransitioning } = useAuth();
 
-import ActivityLogPage from "@/app/dashboard/shared/ActivityLogPage";
-import ProfilePage from "@/app/dashboard/shared/ProfilePage";
+  return (
+    <>
+      {isTransitioning && <PageLoader message="Loading SportSync Dashboard..." />}
+      <Routes>
+        {/* Public Route */}
+        <Route path="/login" element={<Login />} />
 
-import { UserProvider } from "@/lib/UserContext";
+        {/* Redirect Root based on Role */}
+        <Route path="/" element={<RoleRedirect />} />
 
-const queryClient = new QueryClient();
+        {/* Admin Routes */}
+        <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/staff" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><ManageStaff /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/students" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><ManageStudents /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/equipment" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><ManageEquipment /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/bookings" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><ManageBookings /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/penalties" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><ManagePenalties /></DashboardLayout></ProtectedRoute>} />
 
-import RootLayout from "@/app/layout";
+        {/* Student Routes */}
+        <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><DashboardLayout><StudentDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/student/inventory" element={<ProtectedRoute allowedRoles={['student']}><DashboardLayout><StudentEquipment /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/student/bookings" element={<ProtectedRoute allowedRoles={['student']}><DashboardLayout><StudentBookings /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/student/penalties" element={<ProtectedRoute allowedRoles={['student']}><DashboardLayout><StudentPenalty /></DashboardLayout></ProtectedRoute>} />
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Sonner />
+        {/* Staff Routes */}
+        <Route path="/staff" element={<ProtectedRoute allowedRoles={['staff']}><DashboardLayout><StaffDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/staff/inventory" element={<ProtectedRoute allowedRoles={['staff']}><DashboardLayout><StaffEquipment /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/staff/bookings" element={<ProtectedRoute allowedRoles={['staff']}><DashboardLayout><StaffBookings /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/staff/penalties" element={<ProtectedRoute allowedRoles={['staff']}><DashboardLayout><StaffWarnings /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/staff/activity" element={<ProtectedRoute allowedRoles={['staff']}><DashboardLayout><ActivityLogPage /></DashboardLayout></ProtectedRoute>} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
+  );
+};
+
+function App() {
+  return (
+    <Router>
       <AuthProvider>
         <UserProvider>
           <EquipmentProvider>
             <BookingProvider>
-              <BrowserRouter>
-                <RootLayout>
-                <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<LoginPage />} />
-
-                {/* Admin Routes */}
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/staff" element={<ManageStaff />} />
-                <Route path="/admin/students" element={<ManageStudents />} />
-                <Route path="/admin/equipment" element={<ManageEquipment />} />
-                <Route path="/admin/bookings" element={<ManageBookings />} />
-                <Route path="/admin/penalties" element={<ManagePenalties />} />
-                <Route path="/admin/profile" element={<ProfilePage />} />
-                <Route path="/admin/settings" element={<Navigate to="/admin/profile" replace />} />
-
-                {/* Staff Routes */}
-                <Route path="/staff" element={<StaffDashboard />} />
-                <Route path="/staff/equipment" element={<StaffEquipment />} />
-                <Route path="/staff/bookings" element={<StaffBookings />} />
-                <Route path="/staff/penalties" element={<StaffPenalties />} />
-                <Route path="/staff/warnings" element={<Navigate to="/staff" replace />} />
-                <Route path="/staff/activity" element={<ActivityLogPage />} />
-                <Route path="/staff/profile" element={<ProfilePage />} />
-                <Route path="/staff/settings" element={<Navigate to="/staff/profile" replace />} />
-
-                {/* Student Routes */}
-                <Route path="/student" element={<StudentDashboard />} />
-                <Route path="/student/equipment" element={<StudentEquipment />} />
-                <Route path="/student/bookings" element={<StudentBookings />} />
-                <Route path="/student/penalties" element={<StudentWarnings />} />
-                <Route path="/student/warnings" element={<Navigate to="/student/penalties" replace />} />
-                <Route path="/student/activity" element={<ActivityLogPage />} />
-                <Route path="/student/profile" element={<ProfilePage />} />
-                <Route path="/student/settings" element={<Navigate to="/student/profile" replace />} />
-
-                <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </RootLayout>
-            </BrowserRouter>
+              <AppContent />
             </BookingProvider>
           </EquipmentProvider>
         </UserProvider>
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </Router>
+  );
+}
 
 export default App;

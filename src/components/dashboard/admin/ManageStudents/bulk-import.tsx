@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { GraduationCap, ShieldCheck, Mail, Download, Upload, FileText, CheckCircle2, AlertCircle, X, Plus, Trash2, Keyboard } from 'lucide-react';
+import { GraduationCap, ShieldCheck, Mail, Download, Upload, CheckCircle2, Trash2, Keyboard, Loader2 } from 'lucide-react';
 import { User } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 interface BulkImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (students: User[], sendCredentials: boolean) => void;
+  onConfirm: (students: Partial<User>[], sendCredentials: boolean) => Promise<void>;
 }
 
 interface ManualRow {
@@ -21,7 +21,8 @@ interface ManualRow {
 export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDialogProps) {
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
   const [entryMode, setEntryMode] = useState<'file' | 'manual'>('file');
-  const [pendingStudents, setPendingStudents] = useState<User[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<Partial<User>[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [manualRows, setManualRows] = useState<ManualRow[]>([
     { name: '', email: '' },
     { name: '', email: '' },
@@ -67,7 +68,7 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
     reader.onload = (event) => {
       const text = event.target?.result as string;
       const lines = text.split('\n');
-      const students: User[] = [];
+      const students: Partial<User>[] = [];
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -77,12 +78,9 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
         
         if (name && email && email.includes('@')) {
           students.push({
-            id: `student-bulk-${Date.now()}-${i}`,
             name,
             email,
-            role: 'student',
-            createdAt: new Date().toISOString().split('T')[0],
-            isActive: true
+            role: 'student'
           });
         }
       }
@@ -97,10 +95,6 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
       toast.success(`Successfully parsed ${students.length} records`);
     };
     reader.readAsText(file);
-  };
-
-  const handleAddRow = () => {
-    setManualRows([...manualRows, { name: '', email: '' }]);
   };
 
   const handleRemoveRow = (index: number) => {
@@ -122,23 +116,34 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
       return;
     }
 
-    const students: User[] = validRows.map((row, i) => ({
-      id: `student-manual-${Date.now()}-${i}`,
+    const students: Partial<User>[] = validRows.map((row) => ({
       name: row.name.trim(),
       email: row.email.trim(),
-      role: 'student',
-      createdAt: new Date().toISOString().split('T')[0],
-      isActive: true
+      role: 'student'
     }));
 
     setPendingStudents(students);
     setStep('preview');
   };
 
+  const handleFinalConfirm = async (sendCredentials: boolean) => {
+    if (pendingStudents.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await onConfirm(pendingStudents, sendCredentials);
+      onOpenChange(false);
+    } catch (err) {
+      // Error handled by UserContext
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const reset = () => {
     setStep('upload');
     setEntryMode('file');
     setPendingStudents([]);
+    setIsSubmitting(false);
     setManualRows([
       { name: '', email: '' },
       { name: '', email: '' },
@@ -148,6 +153,7 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
   };
 
   const handleDialogClose = (newOpen: boolean) => {
+    if (isSubmitting) return; // Prevent closing while processing
     onOpenChange(newOpen);
     if (!newOpen) {
       setTimeout(reset, 300);
@@ -157,7 +163,7 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className={cn(
-        "bg-card border-border shadow-elevated overflow-hidden p-0 gap-0 transition-all duration-300",
+        "bg-card border-border shadow-elevated overflow-hidden p-0 gap-0 transition-all duration-300 w-[95vw] sm:w-full",
         step === 'upload' && entryMode === 'manual' ? "sm:max-w-2xl" : "sm:max-w-md"
       )}>
         <DialogHeader className="p-6 border-b border-border/50 bg-muted/20">
@@ -169,9 +175,9 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
         <div className="p-6">
           {step === 'upload' ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {/* Mode Switcher */}
               <div className="flex p-1 bg-muted rounded-xl gap-1">
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => setEntryMode('file')}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all",
@@ -182,6 +188,7 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
                   File Upload
                 </button>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => setEntryMode('manual')}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all",
@@ -228,7 +235,7 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
                 <div className="space-y-4 animate-in fade-in duration-300">
                   <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                     {manualRows.map((row, index) => (
-                      <div key={index} className="flex gap-3 items-start animate-in fade-in slide-in-from-left-2 duration-200" style={{ animationDelay: `${index * 50}ms` }}>
+                      <div key={index} className="flex gap-3 items-start">
                         <div className="flex-1 space-y-2">
                           <Input 
                             placeholder="Full Name" 
@@ -261,11 +268,10 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
                   <div className="flex gap-3">
                     <Button 
                       variant="outline" 
-                      onClick={handleAddRow}
+                      onClick={() => setManualRows([...manualRows, { name: '', email: '' }])}
                       className="flex-1 h-10 border-dashed border-2 font-bold gap-2 text-xs"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add More Rows
+                      Add Row
                     </Button>
                     <Button 
                       onClick={handleProcessManual}
@@ -296,33 +302,36 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
               </div>
               
               <div className="space-y-2">
-                <h4 className="text-2xl font-black text-foreground tracking-tight">Data Ready</h4>
+                <h4 className="text-2xl font-black text-foreground tracking-tight">Records Processed</h4>
                 <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed">
-                    We've processed <span className="font-extrabold text-primary">{pendingStudents.length} records</span>. Please confirm to finalize enrollment.
+                    We've validated <span className="font-extrabold text-primary">{pendingStudents.length} students</span>.
                 </p>
               </div>
 
               <div className="w-full space-y-3 pt-2">
                 <Button 
-                  onClick={() => onConfirm(pendingStudents, true)} 
+                  onClick={() => handleFinalConfirm(true)} 
+                  disabled={isSubmitting}
                   className="w-full h-14 gradient-primary text-white font-black text-lg shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl flex items-center justify-center gap-2"
                 >
-                  <Mail className="w-5 h-5" />
-                  Enroll & Send Credentials
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
+                  {isSubmitting ? 'Enrolling Students...' : 'Enroll & Send Credentials'}
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => onConfirm(pendingStudents, false)} 
+                  onClick={() => handleFinalConfirm(false)} 
+                  disabled={isSubmitting}
                   className="w-full h-12 border-2 font-bold hover:bg-muted transition-colors rounded-xl"
                 >
                   Enroll without email
                 </Button>
                 <Button 
                   variant="ghost" 
+                  disabled={isSubmitting}
                   onClick={() => setStep('upload')} 
                   className="w-full text-xs font-bold text-muted-foreground hover:text-foreground"
                 >
-                  Back to {entryMode === 'file' ? 'File Upload' : 'Quick Entry'}
+                  Back
                 </Button>
               </div>
             </div>
@@ -332,3 +341,4 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
     </Dialog>
   );
 }
+
