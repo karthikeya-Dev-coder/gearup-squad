@@ -24,6 +24,7 @@ export function ViewStaff({ staff, open, onOpenChange }: ViewStaffProps) {
             </div>
             Staff Profile
           </DialogTitle>
+          <p className="text-[12px] text-muted-foreground font-medium">Detailed information about the staff member's profile and status.</p>
         </DialogHeader>
 
         <div className="space-y-6 pt-6">

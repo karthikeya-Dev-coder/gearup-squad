@@ -108,7 +108,7 @@ export default function StaffDashboard() {
                       Date: {b.date} · Qty: {b.quantity}
                     </p>
                     <p className="text-[10px] text-muted-foreground text-left">
-                      Request ID: {b.id}
+                      Request ID: {b.id.split('-')[0].toUpperCase()}
                     </p>
                     <p className="text-[10px] text-muted-foreground text-left">
                       Requested At: {new Date(b.createdAt).toLocaleString()}

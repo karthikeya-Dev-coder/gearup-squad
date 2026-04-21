@@ -22,7 +22,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
-    const token = localStorage.getItem('sportsSyncToken');
+    const token = sessionStorage.getItem('sportsSyncToken');
     if (!token) return;
 
     setIsLoading(true);
@@ -94,15 +94,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ 
-      users, 
-      isLoading, 
-      error, 
-      addUser, 
-      updateUser, 
-      deleteUser, 
+    <UserContext.Provider value={{
+      users,
+      isLoading,
+      error,
+      addUser,
+      updateUser,
+      deleteUser,
       bulkImportUsers,
-      refreshUsers: fetchUsers 
+      refreshUsers: fetchUsers
     }}>
       {children}
     </UserContext.Provider>

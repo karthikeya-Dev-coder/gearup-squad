@@ -57,6 +57,7 @@ export function EditStaff({ staff, open, onOpenChange, onUpdate }: EditStaffProp
       <DialogContent className="sm:max-w-md bg-card border-border shadow-elevated">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">Edit Staff Member</DialogTitle>
+          <p className="text-xs text-muted-foreground">Modify the staff member's information and account status below.</p>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

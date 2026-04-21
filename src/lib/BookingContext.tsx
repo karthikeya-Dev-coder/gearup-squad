@@ -37,12 +37,13 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      // Fetch bookings based on role
+      // Fetch bookings and warnings based on role
       const bookingsEndpoint = user.role === 'student' ? '/bookings/my' : '/bookings';
+      const warningsEndpoint = user.role === 'student' ? '/warnings/my' : '/warnings';
       
       const [bookingsRes, warningsRes] = await Promise.all([
         api.get(bookingsEndpoint).catch(() => ({ data: [] })),
-        api.get('/warnings').catch(() => ({ data: [] })),
+        api.get(warningsEndpoint).catch(() => ({ data: [] })),
       ]);
 
       setBookings(bookingsRes.data);

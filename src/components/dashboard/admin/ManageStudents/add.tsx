@@ -86,6 +86,9 @@ export function AddStudent({ onAdd }: AddStudentProps) {
           <DialogTitle className="text-xl font-bold tracking-tight">
             {step === 0 ? 'Enroll New Student' : 'Security Checkpoint'}
           </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {step === 0 ? "Enter the student's details to enroll them in the system." : "The student account is ready. Send their login credentials to complete the process."}
+          </p>
         </DialogHeader>
 
         {step === 0 ? (

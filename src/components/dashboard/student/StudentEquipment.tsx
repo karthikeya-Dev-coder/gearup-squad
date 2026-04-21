@@ -139,7 +139,7 @@ export default function StudentEquipment() {
             <h3 className="font-bold text-lg text-foreground truncate">{eq.name}</h3>
 
 
-            <div className="flex items-center gap-4 mt-4 py-3 border-y border-border/50">
+            <div className="flex flex-wrap items-center gap-4 mt-4 py-3 border-y border-border/50">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-muted-foreground/60">Available</span>
                 <span className="text-sm font-black text-foreground">{eq.available}</span>
@@ -148,6 +148,14 @@ export default function StudentEquipment() {
                 <span className="text-[10px] font-black uppercase text-muted-foreground/60">Category</span>
                 <span className="text-sm font-black text-foreground">{eq.category}</span>
               </div>
+              {eq.assignedStaffName && (
+                <div className="flex flex-col ml-auto">
+                   <span className="text-[10px] font-black uppercase text-primary/60">Holder</span>
+                   <span className="text-[11px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
+                     {eq.assignedStaffName}
+                   </span>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 pt-2">

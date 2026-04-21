@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Equipment } from '@/types';
+import { useAuth } from './AuthContext';
 import api from './api';
 
 interface EquipmentContextType {
@@ -19,6 +20,7 @@ interface EquipmentContextType {
 const EquipmentContext = createContext<EquipmentContextType | undefined>(undefined);
 
 export function EquipmentProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [staffRequests, setStaffRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,18 +39,31 @@ export function EquipmentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchStaffRequests = useCallback(async () => {
+    if (!user) return;
+    
     try {
-      const response = await api.get('/staff-requests');
+      // Admin sees everything, staff see their own
+      const endpoint = user.role === 'admin' ? '/staff-requests' : '/staff-requests/my';
+      
+      // Students don't need to fetch staff requests at all
+      if (user.role === 'student') return;
+
+      const response = await api.get(endpoint);
       setStaffRequests(response.data);
     } catch (err: any) {
       console.error('Failed to fetch staff requests:', err);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    fetchEquipment();
-    fetchStaffRequests();
-  }, [fetchEquipment, fetchStaffRequests]);
+    if (user) {
+      fetchEquipment();
+      fetchStaffRequests();
+    } else {
+      setEquipment([]);
+      setStaffRequests([]);
+    }
+  }, [user, fetchEquipment, fetchStaffRequests]);
 
   const addEquipment = async (item: Partial<Equipment>) => {
     try {

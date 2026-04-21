@@ -41,7 +41,7 @@ export function AddStaff({ onAdd }: AddStaffProps) {
       };
 
       await onAdd(newStaff);
-      
+
       // Reset and close
       setForm({ name: '', email: '', department: '' });
       setStep(0);
@@ -54,7 +54,7 @@ export function AddStaff({ onAdd }: AddStaffProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { setOpen(val); if(!val) setStep(0); }}>
+    <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) setStep(0); }}>
       <DialogTrigger asChild>
         <Button className="gradient-primary text-primary-foreground font-bold shadow-lg hover:opacity-90 transition-all">
           <UserPlus className="w-4 h-4 mr-2" />
@@ -66,6 +66,9 @@ export function AddStaff({ onAdd }: AddStaffProps) {
           <DialogTitle className="text-xl font-bold tracking-tight">
             {step === 0 ? 'Add New Staff Member' : 'Account Created!'}
           </DialogTitle>
+          <p className="text-xs text-muted-foreground">
+            {step === 0 ? "Enter the details of the new staff member to create their account." : "The staff account has been successfully created."}
+          </p>
         </DialogHeader>
 
         {step === 0 ? (
@@ -73,30 +76,30 @@ export function AddStaff({ onAdd }: AddStaffProps) {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="add-name">Full Name</Label>
-                <Input 
-                  id="add-name" 
+                <Input
+                  id="add-name"
                   placeholder="e.g. John Doe"
-                  value={form.name} 
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-email">Email Address</Label>
-                <Input 
-                  id="add-email" 
-                  type="email" 
+                <Input
+                  id="add-email"
+                  type="email"
                   placeholder="name@university.edu"
-                  value={form.email} 
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))} 
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-dept">Department</Label>
-                <Input 
-                  id="add-dept" 
+                <Input
+                  id="add-dept"
                   placeholder="e.g. Cricket, Football"
-                  value={form.department} 
-                  onChange={e => setForm(f => ({ ...f, department: e.target.value }))} 
+                  value={form.department}
+                  onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
                 />
               </div>
             </div>
@@ -113,35 +116,35 @@ export function AddStaff({ onAdd }: AddStaffProps) {
                 <CheckCircle2 className="w-12 h-12 text-white transform -rotate-12" />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-                <h4 className="text-2xl font-black text-foreground tracking-tight">Security Checkpoint</h4>
-                <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">
-                    The account for <span className="font-bold text-emerald-600 underline underline-offset-4">{form.name}</span> is ready for activation.
-                </p>
+              <h4 className="text-2xl font-black text-foreground tracking-tight">Security Checkpoint</h4>
+              <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">
+                The account for <span className="font-bold text-emerald-600 underline underline-offset-4">{form.name}</span> is ready for activation.
+              </p>
             </div>
 
             <div className="w-full space-y-3 pt-6">
-              <Button 
-                onClick={handleSendCredentials} 
+              <Button
+                onClick={handleSendCredentials}
                 disabled={isSubmitting}
                 className="w-full h-14 gradient-primary text-white font-black text-lg shadow-[0_10px_40px_-10px_rgba(var(--primary-rgb),0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
                 {isSubmitting ? 'Processing...' : 'Send Secure Credentials'}
               </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setOpen(false)} 
+              <Button
+                variant="ghost"
+                onClick={() => setOpen(false)}
                 disabled={isSubmitting}
                 className="w-full text-muted-foreground font-bold hover:bg-transparent hover:text-foreground transition-colors"
               >
                 Finish without sending
               </Button>
             </div>
-            
+
             <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">
-                End-to-End Encrypted Invitation
+              End-to-End Encrypted Invitation
             </p>
           </div>
         )}

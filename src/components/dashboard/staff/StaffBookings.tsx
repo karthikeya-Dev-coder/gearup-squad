@@ -161,7 +161,7 @@ export default function StaffBookings() {
                 <h3 className="font-bold text-lg">{selectedBooking?.equipmentName}</h3>
                 <p className="text-sm text-muted-foreground">Issued to {selectedBooking?.studentName}</p>
               </div>
-              <Badge variant="outline" className="h-6">{selectedBooking?.id}</Badge>
+              <Badge variant="outline" className="h-6">{selectedBooking?.id.split('-')[0].toUpperCase()}</Badge>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

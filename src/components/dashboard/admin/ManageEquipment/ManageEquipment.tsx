@@ -257,7 +257,7 @@ export default function ManageEquipment() {
                 <TableCell className="text-center font-semibold">{e.totalQuantity}</TableCell>
                 <TableCell className="text-center font-bold text-success">{e.available}</TableCell>
                 <TableCell className="text-center hidden md:table-cell text-info font-medium">{e.inUse}</TableCell>
-                <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{getStaffName(e.assignedStaffId)}</TableCell>
+                <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{e.assignedStaffName || '—'}</TableCell>
                 <TableCell className="text-right px-4 sm:px-6">
                   <div className="flex items-center justify-end gap-1 sm:gap-2">
                     <EditEquipment equipment={e} onUpdate={handleUpdate} staff={staff} />

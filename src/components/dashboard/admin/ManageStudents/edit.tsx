@@ -58,6 +58,7 @@ export function EditStudent({ student, onUpdate }: EditStudentProps) {
       <DialogContent className="sm:max-w-md bg-card border-border shadow-elevated">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">Edit Student Record</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">Update the student's personal details and account status.</p>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

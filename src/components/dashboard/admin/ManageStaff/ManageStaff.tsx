@@ -24,7 +24,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ManageStaff() {
   const { users, isLoading, error, addUser, updateUser, deleteUser, refreshUsers } = useUsers();
-  
+
   const staff = users.filter(u => u.role === 'staff');
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('All');
@@ -216,8 +216,8 @@ export default function ManageStaff() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-muted-foreground font-medium">
-                    {search || filterDept !== 'All' || filterStatus !== 'All' 
-                      ? 'No staff members match your search criteria.' 
+                    {search || filterDept !== 'All' || filterStatus !== 'All'
+                      ? 'No staff members match your search criteria.'
                       : 'No staff members found in the system.'}
                   </TableCell>
                 </TableRow>
@@ -232,9 +232,9 @@ export default function ManageStaff() {
               Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} entries
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
               >
@@ -243,9 +243,9 @@ export default function ManageStaff() {
               <div className="text-sm font-medium text-foreground">
                 Page {currentPage} of {totalPages}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
               >

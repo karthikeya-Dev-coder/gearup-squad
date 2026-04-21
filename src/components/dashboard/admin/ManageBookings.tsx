@@ -112,7 +112,7 @@ export default function ManageBookings() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-black text-foreground truncate max-w-[100px] sm:max-w-none">{b.studentName}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1 hidden xs:block">ID: {b.id.split('-')[2] || b.id}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1 hidden xs:block">ID: {b.id.split('-')[0].toUpperCase()}</p>
                           </div>
                         </div>
                       </TableCell>

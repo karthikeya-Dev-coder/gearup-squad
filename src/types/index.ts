@@ -21,6 +21,7 @@ export interface Equipment {
   available: number;
   inUse: number;
   assignedStaffId?: string;
+  assignedStaffName?: string;
 }
 
 export interface Booking {
@@ -43,6 +44,7 @@ export interface Warning {
   reason: string;
   level: 1 | 2 | 3;
   issuedBy: string;
+  issuedByName?: string;
   issuedAt: string;
   amount?: number;
   isPaid?: boolean;

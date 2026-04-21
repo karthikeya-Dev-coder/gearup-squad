@@ -11,7 +11,7 @@ function notifyChanged() {
 export function getStaffEquipmentRequests(): StaffEquipmentRequest[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = sessionStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -28,7 +28,7 @@ export function addStaffEquipmentRequest(
     createdAt: new Date().toISOString(),
     status: 'pending',
   };
-  localStorage.setItem(KEY, JSON.stringify([item, ...list]));
+  sessionStorage.setItem(KEY, JSON.stringify([item, ...list]));
   notifyChanged();
   return item;
 }
@@ -38,7 +38,7 @@ export function updateStaffEquipmentRequestStatus(
   status: StaffEquipmentRequest['status']
 ): void {
   const list = getStaffEquipmentRequests();
-  localStorage.setItem(
+  sessionStorage.setItem(
     KEY,
     JSON.stringify(list.map(r => (r.id === id ? { ...r, status } : r)))
   );

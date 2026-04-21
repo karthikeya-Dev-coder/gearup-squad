@@ -100,7 +100,7 @@ export default function StaffWarnings() {
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{w.issuedBy}</TableCell>
+                <TableCell className="text-muted-foreground">{w.issuedByName || 'System'}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {new Date(w.issuedAt).toLocaleDateString()}
                 </TableCell>

@@ -26,6 +26,7 @@ export function ViewStudent({ student, open, onOpenChange, warningCount, isSuspe
              </div>
              Student Profile
           </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">Detailed view of the student's information and current standing.</p>
         </DialogHeader>
         
         <div className="space-y-6 pt-6">

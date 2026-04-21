@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = 'https://equipment-booking-backend.vercel.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -12,7 +12,7 @@ const api = axios.create({
 // Add a request interceptor to include the token in all requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('sportsSyncToken');
+    const token = sessionStorage.getItem('sportsSyncToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,8 +29,8 @@ api.interceptors.response.use(
   (error) => {
     // Handle unauthorized errors (e.g. expired token)
     if (error.response?.status === 401) {
-      localStorage.removeItem('sportsSyncToken');
-      localStorage.removeItem('sportsSyncUser');
+      sessionStorage.removeItem('sportsSyncToken');
+      sessionStorage.removeItem('sportsSyncUser');
     }
     return Promise.reject(error);
   }
