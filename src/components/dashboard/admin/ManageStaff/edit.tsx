@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,7 +57,9 @@ export function EditStaff({ staff, open, onOpenChange, onUpdate }: EditStaffProp
       <DialogContent className="sm:max-w-md bg-card border-border shadow-elevated">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight">Edit Staff Member</DialogTitle>
-          <p className="text-xs text-muted-foreground">Modify the staff member's information and account status below.</p>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Modify the staff member's information and account status below.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

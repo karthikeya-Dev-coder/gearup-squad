@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,9 +66,9 @@ export function AddStaff({ onAdd }: AddStaffProps) {
           <DialogTitle className="text-xl font-bold tracking-tight">
             {step === 0 ? 'Add New Staff Member' : 'Account Created!'}
           </DialogTitle>
-          <p className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground">
             {step === 0 ? "Enter the details of the new staff member to create their account." : "The staff account has been successfully created."}
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         {step === 0 ? (

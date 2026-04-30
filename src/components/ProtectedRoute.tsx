@@ -40,3 +40,15 @@ export function RoleRedirect() {
   const dashboard = roleDashboard[user.role as UserRole] ?? '/login';
   return <Navigate to={dashboard} replace />;
 }
+
+// Prevent logged-in users from accessing public routes (like login)
+export function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  
+  if (user) {
+    const dashboard = roleDashboard[user.role as UserRole] ?? '/';
+    return <Navigate to={dashboard} replace />;
+  }
+
+  return <>{children}</>;
+}

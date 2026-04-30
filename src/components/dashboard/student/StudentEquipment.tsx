@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 export default function StudentEquipment() {
   const { user } = useAuth();
   const { equipment, updateEquipment } = useEquipment();
-  const { addBooking, isStudentSuspended } = useData();
+  const { addBooking, isStudentSuspended, getMonthlyUnpaidCount } = useData();
 
   const [search, setSearch] = useState('');
   const [selectedEq, setSelectedEq] = useState<Equipment | null>(null);
@@ -25,8 +25,9 @@ export default function StudentEquipment() {
   const [quantity, setQuantity] = useState(1);
   const [formError, setFormError] = useState('');
 
-  // The 3-strike suspension rule
+  // The 3-strike suspension rule or Unpaid fines
   const isSuspended = user ? isStudentSuspended(user.id) : false;
+  const hasUnpaidFines = user ? getMonthlyUnpaidCount(user.id) > 0 : false;
 
   const filtered = equipment.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -89,7 +90,8 @@ export default function StudentEquipment() {
           setIsDialogOpen(false);
           setSelectedEq(null);
         } catch (err: any) {
-          toast.error(err.message || 'Booking failed');
+          const errMsg = err.response?.data?.message || err.message || 'Booking failed';
+          toast.error(errMsg);
         }
       };
 
@@ -110,6 +112,16 @@ export default function StudentEquipment() {
           <div>
             <h4 className="font-bold text-destructive">Account Suspended (3 Strikes Reached)</h4>
             <p className="text-sm text-destructive/80 mt-1">You have reached the maximum penalty threshold. Booking privileges are currently disabled.</p>
+          </div>
+        </div>
+      )}
+
+      {hasUnpaidFines && !isSuspended && (
+        <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-orange-600 font-bold mt-0.5" />
+          <div>
+            <h4 className="font-bold text-orange-600">Action Required: Unpaid Penalties</h4>
+            <p className="text-sm text-orange-600/80 mt-1">Booking privileges are restricted. Please clear your pending equipment return fines to resume booking.</p>
           </div>
         </div>
       )}
@@ -161,7 +173,7 @@ export default function StudentEquipment() {
             <div className="mt-4 pt-2">
               <Button
                 onClick={() => handleOpenBooking(eq)}
-                disabled={isSuspended || eq.available === 0}
+                disabled={isSuspended || hasUnpaidFines || eq.available === 0}
                 className="w-full gradient-primary text-primary-foreground font-bold shadow-lg shadow-primary/20"
               >
                 <Plus className="w-4 h-4 mr-2" /> Book Now

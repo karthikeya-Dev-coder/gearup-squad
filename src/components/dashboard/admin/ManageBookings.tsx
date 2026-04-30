@@ -29,11 +29,11 @@ export default function ManageBookings() {
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmReturn = async () => {
+  const handleConfirmReturn = async (penalty?: { amount: number, reason: string }) => {
     if (selectedBooking) {
       setIsSubmitting(true);
       try {
-        await updateBookingStatus(selectedBooking.id, 'returned');
+        await updateBookingStatus(selectedBooking.id, 'returned', penalty);
         toast.success('Equipment returned successfully!');
         setReturnDialogOpen(false);
         setSelectedBooking(null);
@@ -117,7 +117,18 @@ export default function ManageBookings() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-bold text-foreground truncate block max-w-[80px] sm:max-w-none">{b.equipmentName}</span>
+                        <span className="text-sm font-bold text-foreground truncate block max-w-[120px] sm:max-w-none">{b.equipmentName}</span>
+                        <div className="lg:hidden mt-2 space-y-1 bg-muted/30 p-1.5 rounded-md border border-border/50">
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+                            <Calendar className="w-3 h-3 text-primary opacity-70" /> {b.date}
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-foreground font-black">
+                            <Clock className="w-3 h-3 text-primary opacity-70" /> {b.timeSlot}
+                          </div>
+                          <div className="sm:hidden mt-1 pt-1 border-t border-border/50">
+                            <BookingTimer booking={b} />
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <div className="flex flex-col gap-1">

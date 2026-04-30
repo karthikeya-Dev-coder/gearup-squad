@@ -17,7 +17,7 @@ interface ReturnBookingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   booking: Booking | null;
-  onConfirm: () => void;
+  onConfirm: (penalty?: { amount: number, reason: string }) => void;
 }
 
 export function ReturnBookingDialog({
@@ -138,7 +138,19 @@ export function ReturnBookingDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1 font-black text-sm hover:bg-muted rounded-2xl h-14 border border-border/50">
             Cancel
           </Button>
-          <Button onClick={onConfirm} className="flex-1 gradient-primary text-white shadow-xl shadow-primary/20 font-black text-sm rounded-2xl h-14 border-none hover:scale-[1.02] transition-transform">
+          <Button 
+            onClick={() => {
+              if (delayInfo?.isLate) {
+                onConfirm({ 
+                  amount: delayInfo.penaltyAmount, 
+                  reason: `Late return of ${booking?.equipmentName} (Delayed by ${delayInfo.diffMins} mins)` 
+                });
+              } else {
+                onConfirm();
+              }
+            }} 
+            className="flex-1 gradient-primary text-white shadow-xl shadow-primary/20 font-black text-sm rounded-2xl h-14 border-none hover:scale-[1.02] transition-transform"
+          >
             Confirm Return
           </Button>
         </DialogFooter>

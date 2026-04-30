@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { User } from '@/types';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
@@ -26,7 +26,9 @@ export function ViewStudent({ student, open, onOpenChange, warningCount, isSuspe
              </div>
              Student Profile
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">Detailed view of the student's information and current standing.</p>
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
+            Detailed view of the student's information and current standing.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6 pt-6">

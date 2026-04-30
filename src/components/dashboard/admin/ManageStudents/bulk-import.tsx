@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GraduationCap, ShieldCheck, Mail, Download, Upload, CheckCircle2, Trash2, Keyboard, Loader2 } from 'lucide-react';
@@ -170,6 +170,9 @@ export function BulkImportDialog({ open, onOpenChange, onConfirm }: BulkImportDi
           <DialogTitle className="text-xl font-bold tracking-tight">
             {step === 'upload' ? 'Bulk Student Enrollment' : 'Confirm Enrollment'}
           </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
+            {step === 'upload' ? 'Upload a CSV file or enter details manually to enroll multiple students.' : 'Review and confirm the students to be enrolled.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="p-6">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,9 +86,9 @@ export function AddStudent({ onAdd }: AddStudentProps) {
           <DialogTitle className="text-xl font-bold tracking-tight">
             {step === 0 ? 'Enroll New Student' : 'Security Checkpoint'}
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
             {step === 0 ? "Enter the student's details to enroll them in the system." : "The student account is ready. Send their login credentials to complete the process."}
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         {step === 0 ? (

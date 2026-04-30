@@ -6,7 +6,7 @@ import { UserProvider } from "@/lib/UserContext";
 import { EquipmentProvider } from "@/lib/EquipmentContext";
 import { BookingProvider } from "@/lib/BookingContext";
 import { PageLoader } from "@/components/ui/PageLoader";
-import { ProtectedRoute, RoleRedirect } from "@/components/ProtectedRoute";
+import { ProtectedRoute, RoleRedirect, GuestRoute } from "@/components/ProtectedRoute";
 import { DashboardLayout } from '@/components/dashboard/layout';
 
 // Admin Imports
@@ -38,8 +38,8 @@ const AppContent = () => {
     <>
       {isTransitioning && <PageLoader message="Loading SportSync Dashboard..." />}
       <Routes>
-        {/* Public Route */}
-        <Route path="/login" element={<Login />} />
+        {/* Public Route - Protected from logged-in users */}
+        <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
 
         {/* Redirect Root based on Role */}
         <Route path="/" element={<RoleRedirect />} />
@@ -74,7 +74,7 @@ const AppContent = () => {
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <UserProvider>
           <EquipmentProvider>

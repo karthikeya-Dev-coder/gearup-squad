@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { User } from '@/types';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
 
 interface UserContextType {
   users: User[];
@@ -17,13 +18,14 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     const token = sessionStorage.getItem('sportsSyncToken');
-    if (!token) return;
+    if (!token || currentUser?.role !== 'admin') return;
 
     setIsLoading(true);
     setError(null);
@@ -33,11 +35,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error('Error fetching users:', err);
       setError(err.response?.data?.message || 'Failed to fetch users');
-      toast.error('Failed to load users');
+      // Only toast error if explicitly forced or if we're on a user management page
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser?.role]);
 
   useEffect(() => {
     fetchUsers();

@@ -10,7 +10,7 @@ interface BookingContextType {
   isLoading: boolean;
   error: string | null;
   addBooking: (booking: Partial<Booking>) => Promise<void>;
-  updateBookingStatus: (id: string, status: Booking['status']) => Promise<void>;
+  updateBookingStatus: (id: string, status: Booking['status'], penalty?: { amount: number, reason: string }) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   issueWarning: (warning: Partial<Warning>) => Promise<void>;
   payPenalty: (id: string) => Promise<void>;
@@ -75,9 +75,9 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateBookingStatus = async (id: string, status: Booking['status']) => {
+  const updateBookingStatus = async (id: string, status: Booking['status'], penalty?: { amount: number, reason: string }) => {
     try {
-      await api.patch(`/bookings/${id}/status`, { status });
+      await api.patch(`/bookings/${id}/status`, { status, penalty });
       await fetchData();
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Failed to update booking status');

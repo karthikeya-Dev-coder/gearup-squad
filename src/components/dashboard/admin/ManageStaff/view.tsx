@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { User } from '@/types';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
@@ -24,7 +24,9 @@ export function ViewStaff({ staff, open, onOpenChange }: ViewStaffProps) {
             </div>
             Staff Profile
           </DialogTitle>
-          <p className="text-[12px] text-muted-foreground font-medium">Detailed information about the staff member's profile and status.</p>
+          <DialogDescription className="text-[12px] text-muted-foreground font-medium">
+            Detailed information about the staff member's profile and status.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 pt-6">
